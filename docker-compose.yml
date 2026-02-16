@@ -1,0 +1,16 @@
+services:
+  postgres:
+    image: postgres:17
+    container_name: renav_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: renav
+      POSTGRES_PASSWORD: renav123
+      POSTGRES_DB: renav_crm
+    ports:
+      - "5432:5432"
+    volumes:
+      - renav_pgdata:/var/lib/postgresql/data
+
+volumes:
+  renav_pgdata:
