@@ -1,9 +1,12 @@
 generator client {
   provider = "prisma-client-js"
+  previewFeatures = ["multiSchema"]
 }
 
 datasource db {
   provider = "postgresql"
+  url      = env("DATABASE_URL")
+  schemas  = ["public", "crm", "cat", "inv"]
 }
 
 enum Role {
@@ -41,6 +44,8 @@ model User {
 
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
+
+  @@schema("public")
 }
 
 model Lead {
@@ -61,6 +66,7 @@ model Lead {
 
   @@index([status])
   @@index([assignedToId])
+  @@schema("public")
 }
 
 model Activity {
@@ -79,4 +85,554 @@ model Activity {
   @@index([leadId])
   @@index([userId])
   @@index([type])
+  @@schema("public")
+}
+
+// =========================================================
+// CATALOGOS (Schema: cat)
+// =========================================================
+
+model CatServicios {
+  id_servicio Int     @id @default(autoincrement())
+  codigo      String  @unique
+  nombre      String
+  activo      Boolean @default(true)
+
+  leads_principal     CrmLead[]              @relation("LeadServicioPrincipal")
+  lead_servicios      CrmLeadServicio[]
+  etapas_pipeline     CrmEtapaPipeline[]
+  solicitudes         CrmSolicitudServicio[]
+
+  @@map("cat_servicios")
+  @@schema("cat")
+  @@index([activo])
+}
+
+model CatMetodoPago {
+  id_metodo_pago Int    @id @default(autoincrement())
+  codigo         String @unique
+  nombre         String
+
+  solicitudes CrmSolicitudServicio[]
+
+  @@map("cat_met_pago")
+  @@schema("cat")
+}
+
+model CatTipoInmueble {
+  id_tipo_inmueble Int    @id @default(autoincrement())
+  codigo           String @unique
+  nombre           String
+
+  solicitudes_br CrmSolicitudBienesRaices[]
+  unidades       InvUnidad[]
+
+  @@map("cat_tipo_inmueble")
+  @@schema("cat")
+}
+
+model CatTipoProyecto {
+  id_tipo_proyecto Int    @id @default(autoincrement())
+  codigo           String @unique
+  nombre           String
+
+  solicitudes_arq  CrmSolicitudArquitectura[]
+  solicitudes_cons CrmSolicitudConstruccion[]
+
+  @@map("cat_tipo_proyecto")
+  @@schema("cat")
+}
+
+model CatTipoPropiedad {
+  id_tipo_propiedad Int     @id @default(autoincrement())
+  tenencia          String?
+  uso               String?
+  tipologia         String?
+  descripcion       String?
+
+  unidades InvUnidad[]
+
+  @@map("cat_tipo_propiedad")
+  @@schema("cat")
+  @@index([uso])
+}
+
+model CatOrigenProyecto {
+  id_origen_proyecto Int    @id @default(autoincrement())
+  codigo             String @unique
+  nombre             String
+
+  desarrollos InvDesarrollo[]
+
+  @@map("cat_origen_proyecto")
+  @@schema("cat")
+}
+
+model CatEstadoUnidad {
+  id_estado_unidad Int    @id @default(autoincrement())
+  codigo           String @unique
+  nombre           String
+
+  unidades InvUnidad[]
+
+  @@map("cat_estado_unidad")
+  @@schema("cat")
+}
+
+model CatEstadoRelacionDesarrollador {
+  id_estado Int    @id @default(autoincrement())
+  codigo    String @unique
+  nombre    String
+
+  desarrollos InvDesarrollo[]
+
+  @@map("cat_estado_relacion_desarrollador")
+  @@schema("cat")
+}
+
+model CatNivelCertezaLegal {
+  id_nivel Int    @id @default(autoincrement())
+  codigo   String @unique
+  nombre   String
+
+  desarrollos InvDesarrollo[]
+
+  @@map("cat_niv_certeza_legal")
+  @@schema("cat")
+}
+
+model CatEstadoDocumentacion {
+  id_estado_doc Int    @id @default(autoincrement())
+  codigo        String @unique
+  nombre        String
+
+  desarrollos InvDesarrollo[]
+
+  @@map("cat_estado_doc")
+  @@schema("cat")
+}
+
+model CatSubtipoHabitacional {
+  id_subtipo Int    @id @default(autoincrement())
+  nombre     String
+  codigo     String @unique
+
+  solicitudes_arq  CrmSolicitudArquitectura[]
+  solicitudes_cons CrmSolicitudConstruccion[]
+
+  @@map("cat_subtipo_habitacional")
+  @@schema("cat")
+  @@index([nombre])
+}
+
+// =========================================================
+// CRM (Schema: crm)
+// =========================================================
+
+model CrmContacto {
+  id_contacto Int      @id @default(autoincrement())
+  nombre      String
+  correo      String?
+  telefono    String?
+  origen      String?
+  ciudad      String?
+  creado_en   DateTime @default(now()) @db.Timestamptz
+
+  leads CrmLead[]
+
+  @@map("crm_contacto")
+  @@schema("crm")
+  @@index([telefono])
+  @@index([correo])
+}
+
+model CrmUsuario {
+  id_usuario Int      @id @default(autoincrement())
+  nombre     String
+  email      String   @unique
+  telefono   String?
+  rol        String
+  activo     Boolean  @default(true)
+  creado_en  DateTime @default(now()) @db.Timestamptz
+
+  leads_asignados     CrmLead[]
+  historial_etapas    CrmHistorialEtapaLead[]
+  actividades_creadas CrmActividad[]
+
+  @@map("crm_usuario")
+  @@schema("crm")
+}
+
+model CrmLead {
+  id_lead               Int      @id @default(autoincrement())
+  id_contacto           Int
+  id_servicio_principal Int?
+  estado                String
+  prioridad             String
+  id_usuario_asignado   Int?
+  notas_iniciales       String?
+  creado_en             DateTime @default(now()) @db.Timestamptz
+  actualizado_en        DateTime @default(now()) @updatedAt @db.Timestamptz
+
+  contacto           CrmContacto   @relation(fields: [id_contacto], references: [id_contacto])
+  usuario_asignado   CrmUsuario?   @relation(fields: [id_usuario_asignado], references: [id_usuario])
+  servicio_principal CatServicios? @relation("LeadServicioPrincipal", fields: [id_servicio_principal], references: [id_servicio])
+
+  servicios        CrmLeadServicio[]
+  historial_etapas CrmHistorialEtapaLead[]
+  actividades      CrmActividad[]
+  solicitudes      CrmSolicitudServicio[]
+  apartados        InvApartado[]
+  ventas           InvVenta[]
+
+  @@map("crm_lead")
+  @@schema("crm")
+  @@index([id_contacto])
+  @@index([id_usuario_asignado])
+  @@index([id_servicio_principal])
+  @@index([estado])
+  @@index([creado_en])
+}
+
+model CrmLeadServicio {
+  id_lead_servicio Int      @id @default(autoincrement())
+  id_lead          Int
+  id_servicio      Int
+  es_principal     Boolean  @default(false)
+  creado_en        DateTime @default(now()) @db.Timestamptz
+
+  lead     CrmLead      @relation(fields: [id_lead], references: [id_lead], onDelete: Cascade)
+  servicio CatServicios @relation(fields: [id_servicio], references: [id_servicio])
+
+  @@unique([id_lead, id_servicio])
+  @@map("crm_lead_servicio")
+  @@schema("crm")
+}
+
+model CrmEtapaPipeline {
+  id_etapa    Int     @id @default(autoincrement())
+  id_servicio Int
+  nombre      String
+  orden       Int
+  activo      Boolean @default(true)
+
+  servicio         CatServicios            @relation(fields: [id_servicio], references: [id_servicio])
+  historial_etapas CrmHistorialEtapaLead[]
+
+  @@unique([id_servicio, orden])
+  @@map("crm_etapa_pipeline")
+  @@schema("crm")
+}
+
+model CrmHistorialEtapaLead {
+  id_historial Int      @id @default(autoincrement())
+  id_lead      Int
+  id_etapa     Int
+  cambiado_por Int?
+  cambiado_en  DateTime @default(now()) @db.Timestamptz
+
+  lead    CrmLead          @relation(fields: [id_lead], references: [id_lead], onDelete: Cascade)
+  etapa   CrmEtapaPipeline @relation(fields: [id_etapa], references: [id_etapa])
+  usuario CrmUsuario?      @relation(fields: [cambiado_por], references: [id_usuario])
+
+  @@map("crm_historial_etapa_lead")
+  @@schema("crm")
+  @@index([id_lead])
+  @@index([id_etapa])
+}
+
+model CrmActividad {
+  id_actividad    Int       @id @default(autoincrement())
+  id_lead         Int
+  tipo            String
+  descripcion     String?
+  programada_para DateTime? @db.Timestamptz
+  realizada_en    DateTime? @db.Timestamptz
+  creada_por      Int?
+  creada_en       DateTime  @default(now()) @db.Timestamptz
+
+  lead    CrmLead     @relation(fields: [id_lead], references: [id_lead], onDelete: Cascade)
+  usuario CrmUsuario? @relation(fields: [creada_por], references: [id_usuario])
+
+  @@map("crm_actividad")
+  @@schema("crm")
+  @@index([id_lead])
+  @@index([programada_para])
+}
+
+model CrmSolicitudServicio {
+  id_solicitud    Int      @id @default(autoincrement())
+  id_lead         Int
+  id_servicio     Int
+  presupuesto_min Decimal? @db.Decimal(14, 2)
+  presupuesto_max Decimal? @db.Decimal(14, 2)
+  id_metodo_pago  Int?
+  ciudad          String?
+  zona            String?
+  ubicacion_texto String?
+  creado_en       DateTime @default(now()) @db.Timestamptz
+
+  lead        CrmLead        @relation(fields: [id_lead], references: [id_lead], onDelete: Cascade)
+  servicio    CatServicios   @relation(fields: [id_servicio], references: [id_servicio])
+  metodo_pago CatMetodoPago? @relation(fields: [id_metodo_pago], references: [id_metodo_pago])
+
+  arquitectura  CrmSolicitudArquitectura?
+  construccion  CrmSolicitudConstruccion?
+  avaluo        CrmSolicitudAvaluo?
+  bienes_raices CrmSolicitudBienesRaices?
+
+  @@map("crm_solicitud_servicio")
+  @@schema("crm")
+  @@index([id_lead])
+  @@index([id_servicio])
+}
+
+model CrmSolicitudArquitectura {
+  id_solicitud                  Int      @id
+  frente_m                      Decimal? @db.Decimal(12, 2)
+  fondo_m                       Decimal? @db.Decimal(12, 2)
+  superficie_m2                 Decimal? @db.Decimal(12, 2)
+  ubicacion                     String?
+  zona                          String?
+  conoce_compatibilidad_urbanistica Boolean?
+  id_tipo_proyecto              Int?
+  id_subtipo_habitacional       Int?
+  proyectar_y_construir_inmediato Boolean?
+
+  solicitud            CrmSolicitudServicio    @relation(fields: [id_solicitud], references: [id_solicitud], onDelete: Cascade)
+  tipo_proyecto        CatTipoProyecto?        @relation(fields: [id_tipo_proyecto], references: [id_tipo_proyecto])
+  subtipo_habitacional CatSubtipoHabitacional? @relation(fields: [id_subtipo_habitacional], references: [id_subtipo])
+
+  @@map("crm_solicitud_arquitectura")
+  @@schema("crm")
+}
+
+model CrmSolicitudConstruccion {
+  id_solicitud                  Int      @id
+  tiene_proyecto                Boolean?
+  frente_m                      Decimal? @db.Decimal(12, 2)
+  fondo_m                       Decimal? @db.Decimal(12, 2)
+  superficie_m2                 Decimal? @db.Decimal(12, 2)
+  ubicacion                     String?
+  zona                          String?
+  conoce_compatibilidad_urbanistica Boolean?
+  id_tipo_proyecto              Int?
+  id_subtipo_habitacional       Int?
+  construccion_inmediata        Boolean?
+
+  solicitud            CrmSolicitudServicio    @relation(fields: [id_solicitud], references: [id_solicitud], onDelete: Cascade)
+  tipo_proyecto        CatTipoProyecto?        @relation(fields: [id_tipo_proyecto], references: [id_tipo_proyecto])
+  subtipo_habitacional CatSubtipoHabitacional? @relation(fields: [id_subtipo_habitacional], references: [id_subtipo])
+
+  @@map("crm_solicitud_construccion")
+  @@schema("crm")
+}
+
+model CrmSolicitudAvaluo {
+  id_solicitud             Int      @id
+  tipo_bien                String?
+  ubicacion                String?
+  zona                     String?
+  frente_m                 Decimal? @db.Decimal(12, 2)
+  fondo_m                  Decimal? @db.Decimal(12, 2)
+  superficie_m2            Decimal? @db.Decimal(12, 2)
+  terreno_topografia       String?
+  terreno_forma            String?
+  superficie_construida_m2 Decimal? @db.Decimal(12, 2)
+  fecha_visita             DateTime? @db.Date
+  temporalidad_entrega     String?
+
+  solicitud CrmSolicitudServicio @relation(fields: [id_solicitud], references: [id_solicitud], onDelete: Cascade)
+
+  @@map("crm_solicitud_avaluo")
+  @@schema("crm")
+}
+
+model CrmSolicitudBienesRaices {
+  id_solicitud              Int      @id
+  id_tipo_inmueble          Int?
+  ciudad                    String?
+  zona                      String?
+  ubicacion                 String?
+  frente_m                  Decimal? @db.Decimal(12, 2)
+  fondo_m                   Decimal? @db.Decimal(12, 2)
+  superficie_m2             Decimal? @db.Decimal(12, 2)
+  recamaras                 Int?
+  banos                     Int?
+  estacionamientos          Int?
+  m2_construidos_requeridos Decimal? @db.Decimal(12, 2)
+
+  solicitud     CrmSolicitudServicio @relation(fields: [id_solicitud], references: [id_solicitud], onDelete: Cascade)
+  tipo_inmueble CatTipoInmueble?     @relation(fields: [id_tipo_inmueble], references: [id_tipo_inmueble])
+
+  @@map("crm_solicitud_bienes_raices")
+  @@schema("crm")
+}
+
+// =========================================================
+// INVENTARIO (Schema: inv)
+// =========================================================
+
+model InvCiudad {
+  id_inv_ciudad Int     @id @default(autoincrement())
+  nombre        String
+  estado        String?
+  codigo        String? @unique
+
+  desarrollos InvDesarrollo[]
+
+  @@map("inv_ciudad")
+  @@schema("inv")
+  @@index([nombre])
+}
+
+model InvDesarrollador {
+  id_desarrollador Int     @id @default(autoincrement())
+  nombre           String
+  ubicacion        String?
+  email            String?
+  telefono         String?
+
+  desarrollos InvDesarrollo[]
+
+  @@map("inv_desarrollador")
+  @@schema("inv")
+  @@index([nombre])
+}
+
+model InvDesarrollo {
+  id_desarrollo       Int      @id @default(autoincrement())
+  nombre              String
+  ciudad              Int?
+  id_desarrollador    Int?
+  id_estado_relac_des Int?
+  nivel_certeza_legal Int?
+  cat_estado_doc      Int?
+  id_origen_proyecto  Int?
+  porcentaje_comision Decimal? @db.Decimal(8, 4)
+  creado_en           DateTime @default(now()) @db.Timestamptz
+  actualizado_en      DateTime @default(now()) @updatedAt @db.Timestamptz
+
+  inv_ciudad          InvCiudad?                      @relation(fields: [ciudad], references: [id_inv_ciudad])
+  desarrollador       InvDesarrollador?               @relation(fields: [id_desarrollador], references: [id_desarrollador])
+  estado_relacion     CatEstadoRelacionDesarrollador? @relation(fields: [id_estado_relac_des], references: [id_estado])
+  certeza_legal       CatNivelCertezaLegal?           @relation(fields: [nivel_certeza_legal], references: [id_nivel])
+  estado_doc          CatEstadoDocumentacion?         @relation(fields: [cat_estado_doc], references: [id_estado_doc])
+  origen_proyecto     CatOrigenProyecto?              @relation(fields: [id_origen_proyecto], references: [id_origen_proyecto])
+
+  tipologias InvTipologia[]
+  unidades   InvUnidad[]
+
+  @@map("inv_desarrollo")
+  @@schema("inv")
+  @@index([ciudad])
+  @@index([id_desarrollador])
+  @@index([id_origen_proyecto])
+  @@index([creado_en])
+}
+
+model InvTipologia {
+  id_tipologia   Int    @id @default(autoincrement())
+  id_desarrollo  Int
+  nombre         String
+  total_unidades Int?
+
+  desarrollo InvDesarrollo @relation(fields: [id_desarrollo], references: [id_desarrollo], onDelete: Cascade)
+  unidades   InvUnidad[]
+
+  @@map("inv_tipologia")
+  @@schema("inv")
+  @@index([id_desarrollo])
+}
+
+model InvUnidad {
+  id_unidad             Int      @id @default(autoincrement())
+  id_desarrollo         Int
+  id_tipologia          Int?
+  codigo_unidad         String?
+  descripcion           String?
+  direccion             String?
+  m2_terreno            Decimal? @db.Decimal(12, 2)
+  m2_construccion       Decimal? @db.Decimal(12, 2)
+  moneda                String?
+  precios_lista         Decimal? @db.Decimal(14, 2)
+  creado_actualizado_en DateTime @default(now()) @updatedAt @db.Timestamptz
+  id_tipo_inmueble      Int?
+  id_estado_unidad      Int?
+  id_tipo_propiedad     Int?
+  fecha_obtencion       DateTime? @db.Date
+  fecha_terminacion     DateTime? @db.Date
+
+  desarrollo     InvDesarrollo      @relation(fields: [id_desarrollo], references: [id_desarrollo], onDelete: Cascade)
+  tipologia      InvTipologia?      @relation(fields: [id_tipologia], references: [id_tipologia])
+  tipo_inmueble  CatTipoInmueble?   @relation(fields: [id_tipo_inmueble], references: [id_tipo_inmueble])
+  estado_unidad  CatEstadoUnidad?   @relation(fields: [id_estado_unidad], references: [id_estado_unidad])
+  tipo_propiedad CatTipoPropiedad?  @relation(fields: [id_tipo_propiedad], references: [id_tipo_propiedad])
+
+  precios_historicos InvPrecioHistorico[]
+  apartados          InvApartado[]
+  ventas             InvVenta[]
+
+  @@unique([id_desarrollo, codigo_unidad])
+  @@map("inv_unidad")
+  @@schema("inv")
+  @@index([id_desarrollo])
+  @@index([id_tipologia])
+  @@index([id_estado_unidad])
+  @@index([id_tipo_inmueble])
+  @@index([precios_lista])
+  @@index([fecha_obtencion])
+}
+
+model InvPrecioHistorico {
+  id_precio_historico Int       @id @default(autoincrement())
+  id_unidad           Int
+  precio              Decimal   @db.Decimal(14, 2)
+  vigente_desde       DateTime  @db.Date
+  vigente_hasta       DateTime? @db.Date
+
+  unidad InvUnidad @relation(fields: [id_unidad], references: [id_unidad], onDelete: Cascade)
+
+  @@map("inv_precio_historico")
+  @@schema("inv")
+  @@index([id_unidad])
+  @@index([vigente_desde, vigente_hasta])
+}
+
+model InvApartado {
+  id_apartado    Int       @id @default(autoincrement())
+  id_unidad      Int
+  id_lead        Int?
+  monto_apartado Decimal?  @db.Decimal(14, 2)
+  fecha_apartado DateTime? @db.Date
+  vence_en       DateTime? @db.Date
+  status         Boolean   @default(true)
+
+  unidad InvUnidad @relation(fields: [id_unidad], references: [id_unidad], onDelete: Cascade)
+  lead   CrmLead?  @relation(fields: [id_lead], references: [id_lead])
+
+  @@map("inv_apartado")
+  @@schema("inv")
+  @@index([id_unidad])
+  @@index([id_lead])
+  @@index([status])
+}
+
+model InvVenta {
+  id_venta       Int       @id @default(autoincrement())
+  id_unidad      Int       @unique
+  id_lead        Int?
+  precio_cierre  Decimal?  @db.Decimal(14, 2)
+  fecha_cierre   DateTime? @db.Date
+  porc_comision  Decimal?  @db.Decimal(8, 4)
+  monto_comision Decimal?  @db.Decimal(14, 2)
+
+  unidad InvUnidad @relation(fields: [id_unidad], references: [id_unidad])
+  lead   CrmLead?  @relation(fields: [id_lead], references: [id_lead])
+
+  @@map("inv_venta")
+  @@schema("inv")
+  @@index([id_unidad])
+  @@index([id_lead])
+  @@index([fecha_cierre])
 }
