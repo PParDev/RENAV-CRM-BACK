@@ -8,6 +8,7 @@ import { CrmSolicitudServicio } from '@prisma/client';
 export class ServiceRequestsService {
     constructor(private readonly prisma: PrismaService) { }
 
+    // Crea una solicitud de cotización o servicio (ej. Avalúo, Construcción) vinculada a un lead, haciendo uso de transacciones
     async create(createRequestDto: CreateServiceRequestDto) {
         const { id_lead, id_servicio, presupuesto_min, presupuesto_max, id_metodo_pago, ciudad, zona, ubicacion_texto, ...details } = createRequestDto;
 
@@ -62,6 +63,7 @@ export class ServiceRequestsService {
         });
     }
 
+    // Lista todas las solicitudes de servicios de un lead, incluyendo el detalle del tipo de solicitud
     async findAllByLead(leadId: number) {
         return this.prisma.crmSolicitudServicio.findMany({
             where: { id_lead: leadId },

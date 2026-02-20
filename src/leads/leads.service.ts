@@ -9,6 +9,7 @@ import { CrmLead } from '@prisma/client';
 export class LeadsService {
     constructor(private readonly prisma: PrismaService) { }
 
+    // Crea un nuevo lead en la base de datos y asigna valores iniciales
     async create(createLeadDto: CreateLeadDto): Promise<CrmLead> {
         return this.prisma.crmLead.create({
             data: {
@@ -27,6 +28,7 @@ export class LeadsService {
         });
     }
 
+    // Obtiene una lista paginada de leads, con opción de filtrar por estado, usuario asignado o búsqueda
     async findAll(
         skip?: number,
         take?: number,
@@ -60,6 +62,7 @@ export class LeadsService {
         });
     }
 
+    // Busca un solo lead por su ID, incluyendo toda su información relacionada (actividades, solicitudes, historial)
     async findOne(id: number): Promise<CrmLead> {
         const lead = await this.prisma.crmLead.findUnique({
             where: { id_lead: id },
@@ -80,6 +83,7 @@ export class LeadsService {
         return lead;
     }
 
+    // Actualiza la información de un lead existente
     async update(id: number, updateLeadDto: UpdateLeadDto): Promise<CrmLead> {
         const { estado, ...rest } = updateLeadDto;
 
@@ -107,6 +111,7 @@ export class LeadsService {
         }
     }
 
+    // Elimina un lead de la base de datos
     async remove(id: number): Promise<CrmLead> {
         try {
             return await this.prisma.crmLead.delete({

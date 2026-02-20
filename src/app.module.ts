@@ -7,6 +7,7 @@ import { ContactsModule } from './contacts/contacts.module';
 import { CatalogsModule } from './catalogs/catalogs.module';
 import { ActivitiesModule } from './activities/activities.module';
 import { ServiceRequestsModule } from './service-requests/service-requests.module';
+import { InventoryModule } from './inventory/inventory.module';
 import { DatabaseModule } from './database/database.module';
 
 @Module({
@@ -19,6 +20,7 @@ import { DatabaseModule } from './database/database.module';
     CatalogsModule,
     ActivitiesModule,
     ServiceRequestsModule,
+    InventoryModule,
   ],
 })
 export class AppModule { }

@@ -11,13 +11,28 @@ const common_1 = require("@nestjs/common");
 const auth_module_1 = require("./auth/auth.module");
 const users_module_1 = require("./users/users.module");
 const leads_module_1 = require("./leads/leads.module");
+const contacts_module_1 = require("./contacts/contacts.module");
+const catalogs_module_1 = require("./catalogs/catalogs.module");
+const activities_module_1 = require("./activities/activities.module");
+const service_requests_module_1 = require("./service-requests/service-requests.module");
+const inventory_module_1 = require("./inventory/inventory.module");
 const database_module_1 = require("./database/database.module");
 let AppModule = class AppModule {
 };
 exports.AppModule = AppModule;
 exports.AppModule = AppModule = __decorate([
     (0, common_1.Module)({
-        imports: [database_module_1.DatabaseModule, auth_module_1.AuthModule, users_module_1.UsersModule, leads_module_1.LeadsModule],
+        imports: [
+            database_module_1.DatabaseModule,
+            auth_module_1.AuthModule,
+            users_module_1.UsersModule,
+            leads_module_1.LeadsModule,
+            contacts_module_1.ContactsModule,
+            catalogs_module_1.CatalogsModule,
+            activities_module_1.ActivitiesModule,
+            service_requests_module_1.ServiceRequestsModule,
+            inventory_module_1.InventoryModule,
+        ],
     })
 ], AppModule);
 //# sourceMappingURL=app.module.js.map

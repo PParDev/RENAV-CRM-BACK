@@ -37,4 +37,34 @@ export class CatalogsController {
     getOrigenesProyecto() {
         return this.catalogsService.getOrigenesProyecto();
     }
+
+    @Get('estados-unidad')
+    getEstadosUnidad() {
+        return this.catalogsService.getEstadosUnidad();
+    }
+
+    @Get('estados-relacion-desarrollador')
+    getEstadosRelacionDesarrollador() {
+        return this.catalogsService.getEstadosRelacionDesarrollador();
+    }
+
+    @Get('niveles-certeza-legal')
+    getNivelesCertezaLegal() {
+        return this.catalogsService.getNivelesCertezaLegal();
+    }
+
+    @Get('estados-documentacion')
+    getEstadosDocumentacion() {
+        return this.catalogsService.getEstadosDocumentacion();
+    }
+
+    @Get('tipos-propiedad')
+    getTiposPropiedad() {
+        return this.catalogsService.getTiposPropiedad();
+    }
+
+    @Get('ciudades')
+    getCiudades() {
+        return this.catalogsService.getCiudades();
+    }
 }
