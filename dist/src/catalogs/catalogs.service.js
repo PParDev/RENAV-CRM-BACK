@@ -171,20 +171,6 @@ let CatalogsService = class CatalogsService {
     async deleteTipoPropiedad(id) {
         return this.prisma.catTipoPropiedad.delete({ where: { id_tipo_propiedad: id } });
     }
-    async getCiudades() {
-        return this.prisma.invCiudad.findMany({
-            orderBy: { nombre: 'asc' },
-        });
-    }
-    async createCiudad(data) {
-        return this.prisma.invCiudad.create({ data });
-    }
-    async updateCiudad(id, data) {
-        return this.prisma.invCiudad.update({ where: { id_inv_ciudad: id }, data });
-    }
-    async deleteCiudad(id) {
-        return this.prisma.invCiudad.delete({ where: { id_inv_ciudad: id } });
-    }
 };
 exports.CatalogsService = CatalogsService;
 exports.CatalogsService = CatalogsService = __decorate([

@@ -215,22 +215,22 @@ export class CatalogsService {
         return this.prisma.catTipoPropiedad.delete({ where: { id_tipo_propiedad: id } });
     }
 
-    // ---- Ciudades ----
-    async getCiudades() {
-        return this.prisma.invCiudad.findMany({
-            orderBy: { nombre: 'asc' },
-        });
-    }
+    // // ---- Ciudades ----
+    // async getCiudades() {
+    //     return this.prisma.invCiudad.findMany({
+    //         orderBy: { nombre: 'asc' },
+    //     });
+    // }
 
-    async createCiudad(data: CreateCiudadDto) {
-        return this.prisma.invCiudad.create({ data });
-    }
+    // async createCiudad(data: CreateCiudadDto) {
+    //     return this.prisma.invCiudad.create({ data });
+    // }
 
-    async updateCiudad(id: number, data: UpdateCiudadDto) {
-        return this.prisma.invCiudad.update({ where: { id_inv_ciudad: id }, data });
-    }
+    // async updateCiudad(id: number, data: UpdateCiudadDto) {
+    //     return this.prisma.invCiudad.update({ where: { id_inv_ciudad: id }, data });
+    // }
 
-    async deleteCiudad(id: number) {
-        return this.prisma.invCiudad.delete({ where: { id_inv_ciudad: id } });
-    }
+    // async deleteCiudad(id: number) {
+    //     return this.prisma.invCiudad.delete({ where: { id_inv_ciudad: id } });
+    // }
 }

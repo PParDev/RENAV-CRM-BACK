@@ -239,25 +239,25 @@ export class CatalogsController {
         return this.catalogsService.deleteTipoPropiedad(id);
     }
 
-    // ---- Ciudades ----
-    @Get('ciudades')
-    getCiudades() {
-        return this.catalogsService.getCiudades();
-    }
+    // // ---- Ciudades ----
+    // @Get('ciudades')
+    // getCiudades() {
+    //     return this.catalogsService.getCiudades();
+    // }
 
-    @Post('ciudades')
-    createCiudad(@Body() data: CreateCiudadDto) {
-        return this.catalogsService.createCiudad(data);
-    }
+    // @Post('ciudades')
+    // createCiudad(@Body() data: CreateCiudadDto) {
+    //     return this.catalogsService.createCiudad(data);
+    // }
 
-    @Patch('ciudades/:id')
-    updateCiudad(@Param('id', ParseIntPipe) id: number, @Body() data: UpdateCiudadDto) {
-        return this.catalogsService.updateCiudad(id, data);
-    }
+    // @Patch('ciudades/:id')
+    // updateCiudad(@Param('id', ParseIntPipe) id: number, @Body() data: UpdateCiudadDto) {
+    //     return this.catalogsService.updateCiudad(id, data);
+    // }
 
-    @Delete('ciudades/:id')
-    deleteCiudad(@Param('id', ParseIntPipe) id: number) {
-        return this.catalogsService.deleteCiudad(id);
-    }
+    // @Delete('ciudades/:id')
+    // deleteCiudad(@Param('id', ParseIntPipe) id: number) {
+    //     return this.catalogsService.deleteCiudad(id);
+    // }
 
 }

@@ -154,18 +154,6 @@ let CatalogsController = class CatalogsController {
     deleteTipoPropiedad(id) {
         return this.catalogsService.deleteTipoPropiedad(id);
     }
-    getCiudades() {
-        return this.catalogsService.getCiudades();
-    }
-    createCiudad(data) {
-        return this.catalogsService.createCiudad(data);
-    }
-    updateCiudad(id, data) {
-        return this.catalogsService.updateCiudad(id, data);
-    }
-    deleteCiudad(id) {
-        return this.catalogsService.deleteCiudad(id);
-    }
 };
 exports.CatalogsController = CatalogsController;
 __decorate([
@@ -476,34 +464,6 @@ __decorate([
     __metadata("design:paramtypes", [Number]),
     __metadata("design:returntype", void 0)
 ], CatalogsController.prototype, "deleteTipoPropiedad", null);
-__decorate([
-    (0, common_1.Get)('ciudades'),
-    __metadata("design:type", Function),
-    __metadata("design:paramtypes", []),
-    __metadata("design:returntype", void 0)
-], CatalogsController.prototype, "getCiudades", null);
-__decorate([
-    (0, common_1.Post)('ciudades'),
-    __param(0, (0, common_1.Body)()),
-    __metadata("design:type", Function),
-    __metadata("design:paramtypes", [catalog_dto_1.CreateCiudadDto]),
-    __metadata("design:returntype", void 0)
-], CatalogsController.prototype, "createCiudad", null);
-__decorate([
-    (0, common_1.Patch)('ciudades/:id'),
-    __param(0, (0, common_1.Param)('id', common_1.ParseIntPipe)),
-    __param(1, (0, common_1.Body)()),
-    __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Number, catalog_dto_1.UpdateCiudadDto]),
-    __metadata("design:returntype", void 0)
-], CatalogsController.prototype, "updateCiudad", null);
-__decorate([
-    (0, common_1.Delete)('ciudades/:id'),
-    __param(0, (0, common_1.Param)('id', common_1.ParseIntPipe)),
-    __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Number]),
-    __metadata("design:returntype", void 0)
-], CatalogsController.prototype, "deleteCiudad", null);
 exports.CatalogsController = CatalogsController = __decorate([
     (0, swagger_1.ApiTags)('catalogs'),
     (0, common_1.Controller)('catalogs'),

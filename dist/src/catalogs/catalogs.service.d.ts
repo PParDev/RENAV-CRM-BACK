@@ -1,31 +1,31 @@
 import { PrismaService } from '../database/prisma.service';
-import { CreateBaseCatalogDto, UpdateBaseCatalogDto, CreateServicioDto, UpdateServicioDto, CreateTipoPropiedadDto, UpdateTipoPropiedadDto, CreateCiudadDto, UpdateCiudadDto } from './dto/catalog.dto';
+import { CreateBaseCatalogDto, UpdateBaseCatalogDto, CreateServicioDto, UpdateServicioDto, CreateTipoPropiedadDto, UpdateTipoPropiedadDto } from './dto/catalog.dto';
 export declare class CatalogsService {
     private readonly prisma;
     constructor(prisma: PrismaService);
     getServicios(): Promise<{
-        id_servicio: number;
         codigo: string;
         nombre: string;
         activo: boolean;
+        id_servicio: number;
     }[]>;
     createServicio(data: CreateServicioDto): Promise<{
-        id_servicio: number;
         codigo: string;
         nombre: string;
         activo: boolean;
+        id_servicio: number;
     }>;
     updateServicio(id: number, data: UpdateServicioDto): Promise<{
-        id_servicio: number;
         codigo: string;
         nombre: string;
         activo: boolean;
+        id_servicio: number;
     }>;
     deleteServicio(id: number): Promise<{
-        id_servicio: number;
         codigo: string;
         nombre: string;
         activo: boolean;
+        id_servicio: number;
     }>;
     getMetodosPago(): Promise<{
         codigo: string;
@@ -208,55 +208,31 @@ export declare class CatalogsService {
         id_estado_doc: number;
     }>;
     getTiposPropiedad(): Promise<{
-        id_tipo_propiedad: number;
         tenencia: string | null;
         uso: string | null;
         tipologia: string | null;
         descripcion: string | null;
+        id_tipo_propiedad: number;
     }[]>;
     createTipoPropiedad(data: CreateTipoPropiedadDto): Promise<{
-        id_tipo_propiedad: number;
         tenencia: string | null;
         uso: string | null;
         tipologia: string | null;
         descripcion: string | null;
+        id_tipo_propiedad: number;
     }>;
     updateTipoPropiedad(id: number, data: UpdateTipoPropiedadDto): Promise<{
-        id_tipo_propiedad: number;
         tenencia: string | null;
         uso: string | null;
         tipologia: string | null;
         descripcion: string | null;
+        id_tipo_propiedad: number;
     }>;
     deleteTipoPropiedad(id: number): Promise<{
-        id_tipo_propiedad: number;
         tenencia: string | null;
         uso: string | null;
         tipologia: string | null;
         descripcion: string | null;
-    }>;
-    getCiudades(): Promise<{
-        codigo: string | null;
-        nombre: string;
-        id_inv_ciudad: number;
-        estado: string | null;
-    }[]>;
-    createCiudad(data: CreateCiudadDto): Promise<{
-        codigo: string | null;
-        nombre: string;
-        id_inv_ciudad: number;
-        estado: string | null;
-    }>;
-    updateCiudad(id: number, data: UpdateCiudadDto): Promise<{
-        codigo: string | null;
-        nombre: string;
-        id_inv_ciudad: number;
-        estado: string | null;
-    }>;
-    deleteCiudad(id: number): Promise<{
-        codigo: string | null;
-        nombre: string;
-        id_inv_ciudad: number;
-        estado: string | null;
+        id_tipo_propiedad: number;
     }>;
 }
