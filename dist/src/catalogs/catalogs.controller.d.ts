@@ -1,58 +1,212 @@
 import { CatalogsService } from './catalogs.service';
+import { CreateBaseCatalogDto, UpdateBaseCatalogDto, CreateServicioDto, UpdateServicioDto, CreateTipoPropiedadDto, UpdateTipoPropiedadDto, CreateCiudadDto, UpdateCiudadDto } from './dto/catalog.dto';
 export declare class CatalogsController {
     private readonly catalogsService;
     constructor(catalogsService: CatalogsService);
     getServicios(): Promise<{
-        nombre: string;
         id_servicio: number;
         codigo: string;
+        nombre: string;
         activo: boolean;
     }[]>;
-    getMetodosPago(): Promise<{
-        nombre: string;
+    createServicio(data: CreateServicioDto): Promise<{
+        id_servicio: number;
         codigo: string;
+        nombre: string;
+        activo: boolean;
+    }>;
+    updateServicio(id: number, data: UpdateServicioDto): Promise<{
+        id_servicio: number;
+        codigo: string;
+        nombre: string;
+        activo: boolean;
+    }>;
+    deleteServicio(id: number): Promise<{
+        id_servicio: number;
+        codigo: string;
+        nombre: string;
+        activo: boolean;
+    }>;
+    getMetodosPago(): Promise<{
+        codigo: string;
+        nombre: string;
         id_metodo_pago: number;
     }[]>;
-    getTiposInmueble(): Promise<{
-        nombre: string;
+    createMetodoPago(data: CreateBaseCatalogDto): Promise<{
         codigo: string;
+        nombre: string;
+        id_metodo_pago: number;
+    }>;
+    updateMetodoPago(id: number, data: UpdateBaseCatalogDto): Promise<{
+        codigo: string;
+        nombre: string;
+        id_metodo_pago: number;
+    }>;
+    deleteMetodoPago(id: number): Promise<{
+        codigo: string;
+        nombre: string;
+        id_metodo_pago: number;
+    }>;
+    getTiposInmueble(): Promise<{
+        codigo: string;
+        nombre: string;
         id_tipo_inmueble: number;
     }[]>;
-    getTiposProyecto(): Promise<{
-        nombre: string;
+    createTipoInmueble(data: CreateBaseCatalogDto): Promise<{
         codigo: string;
+        nombre: string;
+        id_tipo_inmueble: number;
+    }>;
+    updateTipoInmueble(id: number, data: UpdateBaseCatalogDto): Promise<{
+        codigo: string;
+        nombre: string;
+        id_tipo_inmueble: number;
+    }>;
+    deleteTipoInmueble(id: number): Promise<{
+        codigo: string;
+        nombre: string;
+        id_tipo_inmueble: number;
+    }>;
+    getTiposProyecto(): Promise<{
+        codigo: string;
+        nombre: string;
         id_tipo_proyecto: number;
     }[]>;
-    getSubtiposHabitacional(): Promise<{
-        nombre: string;
+    createTipoProyecto(data: CreateBaseCatalogDto): Promise<{
         codigo: string;
+        nombre: string;
+        id_tipo_proyecto: number;
+    }>;
+    updateTipoProyecto(id: number, data: UpdateBaseCatalogDto): Promise<{
+        codigo: string;
+        nombre: string;
+        id_tipo_proyecto: number;
+    }>;
+    deleteTipoProyecto(id: number): Promise<{
+        codigo: string;
+        nombre: string;
+        id_tipo_proyecto: number;
+    }>;
+    getSubtiposHabitacional(): Promise<{
+        codigo: string;
+        nombre: string;
         id_subtipo: number;
     }[]>;
-    getOrigenesProyecto(): Promise<{
-        nombre: string;
+    createSubtipoHabitacional(data: CreateBaseCatalogDto): Promise<{
         codigo: string;
+        nombre: string;
+        id_subtipo: number;
+    }>;
+    updateSubtipoHabitacional(id: number, data: UpdateBaseCatalogDto): Promise<{
+        codigo: string;
+        nombre: string;
+        id_subtipo: number;
+    }>;
+    deleteSubtipoHabitacional(id: number): Promise<{
+        codigo: string;
+        nombre: string;
+        id_subtipo: number;
+    }>;
+    getOrigenesProyecto(): Promise<{
+        codigo: string;
+        nombre: string;
         id_origen_proyecto: number;
     }[]>;
-    getEstadosUnidad(): Promise<{
-        nombre: string;
+    createOrigenProyecto(data: CreateBaseCatalogDto): Promise<{
         codigo: string;
+        nombre: string;
+        id_origen_proyecto: number;
+    }>;
+    updateOrigenProyecto(id: number, data: UpdateBaseCatalogDto): Promise<{
+        codigo: string;
+        nombre: string;
+        id_origen_proyecto: number;
+    }>;
+    deleteOrigenProyecto(id: number): Promise<{
+        codigo: string;
+        nombre: string;
+        id_origen_proyecto: number;
+    }>;
+    getEstadosUnidad(): Promise<{
+        codigo: string;
+        nombre: string;
         id_estado_unidad: number;
     }[]>;
-    getEstadosRelacionDesarrollador(): Promise<{
-        nombre: string;
+    createEstadoUnidad(data: CreateBaseCatalogDto): Promise<{
         codigo: string;
+        nombre: string;
+        id_estado_unidad: number;
+    }>;
+    updateEstadoUnidad(id: number, data: UpdateBaseCatalogDto): Promise<{
+        codigo: string;
+        nombre: string;
+        id_estado_unidad: number;
+    }>;
+    deleteEstadoUnidad(id: number): Promise<{
+        codigo: string;
+        nombre: string;
+        id_estado_unidad: number;
+    }>;
+    getEstadosRelacionDesarrollador(): Promise<{
+        codigo: string;
+        nombre: string;
         id_estado: number;
     }[]>;
-    getNivelesCertezaLegal(): Promise<{
-        nombre: string;
+    createEstadoRelacionDesarrollador(data: CreateBaseCatalogDto): Promise<{
         codigo: string;
+        nombre: string;
+        id_estado: number;
+    }>;
+    updateEstadoRelacionDesarrollador(id: number, data: UpdateBaseCatalogDto): Promise<{
+        codigo: string;
+        nombre: string;
+        id_estado: number;
+    }>;
+    deleteEstadoRelacionDesarrollador(id: number): Promise<{
+        codigo: string;
+        nombre: string;
+        id_estado: number;
+    }>;
+    getNivelesCertezaLegal(): Promise<{
+        codigo: string;
+        nombre: string;
         id_nivel: number;
     }[]>;
-    getEstadosDocumentacion(): Promise<{
-        nombre: string;
+    createNivelCertezaLegal(data: CreateBaseCatalogDto): Promise<{
         codigo: string;
+        nombre: string;
+        id_nivel: number;
+    }>;
+    updateNivelCertezaLegal(id: number, data: UpdateBaseCatalogDto): Promise<{
+        codigo: string;
+        nombre: string;
+        id_nivel: number;
+    }>;
+    deleteNivelCertezaLegal(id: number): Promise<{
+        codigo: string;
+        nombre: string;
+        id_nivel: number;
+    }>;
+    getEstadosDocumentacion(): Promise<{
+        codigo: string;
+        nombre: string;
         id_estado_doc: number;
     }[]>;
+    createEstadoDocumentacion(data: CreateBaseCatalogDto): Promise<{
+        codigo: string;
+        nombre: string;
+        id_estado_doc: number;
+    }>;
+    updateEstadoDocumentacion(id: number, data: UpdateBaseCatalogDto): Promise<{
+        codigo: string;
+        nombre: string;
+        id_estado_doc: number;
+    }>;
+    deleteEstadoDocumentacion(id: number): Promise<{
+        codigo: string;
+        nombre: string;
+        id_estado_doc: number;
+    }>;
     getTiposPropiedad(): Promise<{
         id_tipo_propiedad: number;
         tenencia: string | null;
@@ -60,10 +214,49 @@ export declare class CatalogsController {
         tipologia: string | null;
         descripcion: string | null;
     }[]>;
+    createTipoPropiedad(data: CreateTipoPropiedadDto): Promise<{
+        id_tipo_propiedad: number;
+        tenencia: string | null;
+        uso: string | null;
+        tipologia: string | null;
+        descripcion: string | null;
+    }>;
+    updateTipoPropiedad(id: number, data: UpdateTipoPropiedadDto): Promise<{
+        id_tipo_propiedad: number;
+        tenencia: string | null;
+        uso: string | null;
+        tipologia: string | null;
+        descripcion: string | null;
+    }>;
+    deleteTipoPropiedad(id: number): Promise<{
+        id_tipo_propiedad: number;
+        tenencia: string | null;
+        uso: string | null;
+        tipologia: string | null;
+        descripcion: string | null;
+    }>;
     getCiudades(): Promise<{
-        estado: string | null;
-        nombre: string;
         codigo: string | null;
+        nombre: string;
         id_inv_ciudad: number;
+        estado: string | null;
     }[]>;
+    createCiudad(data: CreateCiudadDto): Promise<{
+        codigo: string | null;
+        nombre: string;
+        id_inv_ciudad: number;
+        estado: string | null;
+    }>;
+    updateCiudad(id: number, data: UpdateCiudadDto): Promise<{
+        codigo: string | null;
+        nombre: string;
+        id_inv_ciudad: number;
+        estado: string | null;
+    }>;
+    deleteCiudad(id: number): Promise<{
+        codigo: string | null;
+        nombre: string;
+        id_inv_ciudad: number;
+        estado: string | null;
+    }>;
 }
