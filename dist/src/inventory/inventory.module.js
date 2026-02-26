@@ -14,6 +14,8 @@ const units_module_1 = require("./units/units.module");
 const sales_module_1 = require("./sales/sales.module");
 const prices_module_1 = require("./prices/prices.module");
 const cities_module_1 = require("./cities/cities.module");
+const typologies_module_1 = require("./typologies/typologies.module");
+const apartados_module_1 = require("./apartados/apartados.module");
 let InventoryModule = class InventoryModule {
 };
 exports.InventoryModule = InventoryModule;
@@ -25,7 +27,9 @@ exports.InventoryModule = InventoryModule = __decorate([
             units_module_1.UnitsModule,
             sales_module_1.SalesModule,
             prices_module_1.PricesModule,
-            cities_module_1.CitiesModule
+            cities_module_1.CitiesModule,
+            typologies_module_1.TypologiesModule,
+            apartados_module_1.ApartadosModule
         ],
     })
 ], InventoryModule);

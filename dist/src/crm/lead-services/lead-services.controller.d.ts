@@ -5,37 +5,37 @@ export declare class LeadServicesController {
     constructor(leadServicesService: LeadServicesService);
     create(dto: CreateLeadServiceDto): Promise<{
         id_servicio: number;
-        id_lead: number;
-        id_lead_servicio: number;
-        es_principal: boolean;
         creado_en: Date;
+        id_lead: number;
+        es_principal: boolean;
+        id_lead_servicio: number;
     }>;
     findAll(leadId?: number): Promise<{
         id_servicio: number;
-        id_lead: number;
-        id_lead_servicio: number;
-        es_principal: boolean;
         creado_en: Date;
+        id_lead: number;
+        es_principal: boolean;
+        id_lead_servicio: number;
     }[]>;
     findOne(id: number): Promise<{
         id_servicio: number;
-        id_lead: number;
-        id_lead_servicio: number;
-        es_principal: boolean;
         creado_en: Date;
+        id_lead: number;
+        es_principal: boolean;
+        id_lead_servicio: number;
     }>;
     update(id: number, dto: UpdateLeadServiceDto): Promise<{
         id_servicio: number;
-        id_lead: number;
-        id_lead_servicio: number;
-        es_principal: boolean;
         creado_en: Date;
+        id_lead: number;
+        es_principal: boolean;
+        id_lead_servicio: number;
     }>;
     remove(id: number): Promise<{
         id_servicio: number;
-        id_lead: number;
-        id_lead_servicio: number;
-        es_principal: boolean;
         creado_en: Date;
+        id_lead: number;
+        es_principal: boolean;
+        id_lead_servicio: number;
     }>;
 }

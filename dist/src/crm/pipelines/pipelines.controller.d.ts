@@ -4,38 +4,38 @@ export declare class PipelinesController {
     private readonly pipelinesService;
     constructor(pipelinesService: PipelinesService);
     create(dto: CreatePipelineDto): Promise<{
-        id_etapa: number;
-        id_servicio: number;
         nombre: string;
-        orden: number;
         activo: boolean;
+        id_servicio: number;
+        orden: number;
+        id_etapa: number;
     }>;
     findAll(): Promise<{
-        id_etapa: number;
-        id_servicio: number;
         nombre: string;
-        orden: number;
         activo: boolean;
+        id_servicio: number;
+        orden: number;
+        id_etapa: number;
     }[]>;
     findOne(id: number): Promise<{
-        id_etapa: number;
-        id_servicio: number;
         nombre: string;
-        orden: number;
         activo: boolean;
+        id_servicio: number;
+        orden: number;
+        id_etapa: number;
     }>;
     update(id: number, dto: UpdatePipelineDto): Promise<{
-        id_etapa: number;
-        id_servicio: number;
         nombre: string;
-        orden: number;
         activo: boolean;
+        id_servicio: number;
+        orden: number;
+        id_etapa: number;
     }>;
     remove(id: number): Promise<{
-        id_etapa: number;
-        id_servicio: number;
         nombre: string;
-        orden: number;
         activo: boolean;
+        id_servicio: number;
+        orden: number;
+        id_etapa: number;
     }>;
 }
