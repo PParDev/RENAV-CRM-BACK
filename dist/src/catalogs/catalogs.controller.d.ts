@@ -4,28 +4,28 @@ export declare class CatalogsController {
     private readonly catalogsService;
     constructor(catalogsService: CatalogsService);
     getServicios(): Promise<{
+        id_servicio: number;
         codigo: string;
         nombre: string;
         activo: boolean;
-        id_servicio: number;
     }[]>;
     createServicio(data: CreateServicioDto): Promise<{
+        id_servicio: number;
         codigo: string;
         nombre: string;
         activo: boolean;
-        id_servicio: number;
     }>;
     updateServicio(id: number, data: UpdateServicioDto): Promise<{
+        id_servicio: number;
         codigo: string;
         nombre: string;
         activo: boolean;
-        id_servicio: number;
     }>;
     deleteServicio(id: number): Promise<{
+        id_servicio: number;
         codigo: string;
         nombre: string;
         activo: boolean;
-        id_servicio: number;
     }>;
     getMetodosPago(): Promise<{
         codigo: string;
@@ -208,31 +208,31 @@ export declare class CatalogsController {
         id_estado_doc: number;
     }>;
     getTiposPropiedad(): Promise<{
+        id_tipo_propiedad: number;
         tenencia: string | null;
         uso: string | null;
         tipologia: string | null;
         descripcion: string | null;
-        id_tipo_propiedad: number;
     }[]>;
     createTipoPropiedad(data: CreateTipoPropiedadDto): Promise<{
+        id_tipo_propiedad: number;
         tenencia: string | null;
         uso: string | null;
         tipologia: string | null;
         descripcion: string | null;
-        id_tipo_propiedad: number;
     }>;
     updateTipoPropiedad(id: number, data: UpdateTipoPropiedadDto): Promise<{
+        id_tipo_propiedad: number;
         tenencia: string | null;
         uso: string | null;
         tipologia: string | null;
         descripcion: string | null;
-        id_tipo_propiedad: number;
     }>;
     deleteTipoPropiedad(id: number): Promise<{
+        id_tipo_propiedad: number;
         tenencia: string | null;
         uso: string | null;
         tipologia: string | null;
         descripcion: string | null;
-        id_tipo_propiedad: number;
     }>;
 }

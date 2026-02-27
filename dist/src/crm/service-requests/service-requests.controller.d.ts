@@ -9,9 +9,9 @@ export declare class ServiceRequestsController {
         ciudad: string | null;
         creado_en: Date;
         id_lead: number;
-        zona: string | null;
         presupuesto_min: import("@prisma/client-runtime-utils").Decimal | null;
         presupuesto_max: import("@prisma/client-runtime-utils").Decimal | null;
+        zona: string | null;
         ubicacion_texto: string | null;
         id_solicitud: number;
     }>;
@@ -30,14 +30,14 @@ export declare class ServiceRequestsController {
         } & {
             id_tipo_proyecto: number | null;
             ubicacion: string | null;
+            zona: string | null;
+            id_solicitud: number;
             frente_m: import("@prisma/client-runtime-utils").Decimal | null;
             fondo_m: import("@prisma/client-runtime-utils").Decimal | null;
             superficie_m2: import("@prisma/client-runtime-utils").Decimal | null;
-            zona: string | null;
             conoce_compatibilidad_urbanistica: boolean | null;
-            id_subtipo_habitacional: number | null;
             proyectar_y_construir_inmediato: boolean | null;
-            id_solicitud: number;
+            id_subtipo_habitacional: number | null;
         }) | null;
         construccion: ({
             subtipo_habitacional: {
@@ -53,29 +53,29 @@ export declare class ServiceRequestsController {
         } & {
             id_tipo_proyecto: number | null;
             ubicacion: string | null;
+            zona: string | null;
+            id_solicitud: number;
             frente_m: import("@prisma/client-runtime-utils").Decimal | null;
             fondo_m: import("@prisma/client-runtime-utils").Decimal | null;
             superficie_m2: import("@prisma/client-runtime-utils").Decimal | null;
-            zona: string | null;
             conoce_compatibilidad_urbanistica: boolean | null;
             id_subtipo_habitacional: number | null;
             tiene_proyecto: boolean | null;
             construccion_inmediata: boolean | null;
-            id_solicitud: number;
         }) | null;
         avaluo: {
             ubicacion: string | null;
+            zona: string | null;
+            id_solicitud: number;
             frente_m: import("@prisma/client-runtime-utils").Decimal | null;
             fondo_m: import("@prisma/client-runtime-utils").Decimal | null;
             superficie_m2: import("@prisma/client-runtime-utils").Decimal | null;
-            zona: string | null;
             tipo_bien: string | null;
             terreno_topografia: string | null;
             terreno_forma: string | null;
             superficie_construida_m2: import("@prisma/client-runtime-utils").Decimal | null;
             fecha_visita: Date | null;
             temporalidad_entrega: string | null;
-            id_solicitud: number;
         } | null;
         bienes_raices: ({
             tipo_inmueble: {
@@ -87,21 +87,21 @@ export declare class ServiceRequestsController {
             id_tipo_inmueble: number | null;
             ubicacion: string | null;
             ciudad: string | null;
+            zona: string | null;
+            id_solicitud: number;
             frente_m: import("@prisma/client-runtime-utils").Decimal | null;
             fondo_m: import("@prisma/client-runtime-utils").Decimal | null;
             superficie_m2: import("@prisma/client-runtime-utils").Decimal | null;
-            zona: string | null;
             recamaras: number | null;
             banos: number | null;
             estacionamientos: number | null;
             m2_construidos_requeridos: import("@prisma/client-runtime-utils").Decimal | null;
-            id_solicitud: number;
         }) | null;
         servicio: {
+            id_servicio: number;
             codigo: string;
             nombre: string;
             activo: boolean;
-            id_servicio: number;
         };
     } & {
         id_servicio: number;
@@ -109,9 +109,9 @@ export declare class ServiceRequestsController {
         ciudad: string | null;
         creado_en: Date;
         id_lead: number;
-        zona: string | null;
         presupuesto_min: import("@prisma/client-runtime-utils").Decimal | null;
         presupuesto_max: import("@prisma/client-runtime-utils").Decimal | null;
+        zona: string | null;
         ubicacion_texto: string | null;
         id_solicitud: number;
     })[]>;

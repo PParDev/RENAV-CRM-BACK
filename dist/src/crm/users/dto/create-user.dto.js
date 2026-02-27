@@ -14,10 +14,12 @@ const class_validator_1 = require("class-validator");
 const swagger_1 = require("@nestjs/swagger");
 const client_1 = require("@prisma/client");
 class CreateUserDto {
-    name;
+    nombre;
     email;
     password;
     role;
+    telefono;
+    activo;
 }
 exports.CreateUserDto = CreateUserDto;
 __decorate([
@@ -25,7 +27,7 @@ __decorate([
     (0, class_validator_1.IsString)(),
     (0, class_validator_1.IsNotEmpty)(),
     __metadata("design:type", String)
-], CreateUserDto.prototype, "name", void 0);
+], CreateUserDto.prototype, "nombre", void 0);
 __decorate([
     (0, swagger_1.ApiProperty)(),
     (0, class_validator_1.IsEmail)(),
@@ -42,4 +44,16 @@ __decorate([
     (0, class_validator_1.IsEnum)(client_1.Role),
     __metadata("design:type", String)
 ], CreateUserDto.prototype, "role", void 0);
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)(),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], CreateUserDto.prototype, "telefono", void 0);
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)(),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsBoolean)(),
+    __metadata("design:type", Boolean)
+], CreateUserDto.prototype, "activo", void 0);
 //# sourceMappingURL=create-user.dto.js.map

@@ -6,28 +6,28 @@ export declare class SalesService {
     constructor(prisma: PrismaService);
     createApartado(createApartadoDto: CreateApartadoDto): Promise<{
         id_unidad: number;
-        id_lead: number | null;
         monto_apartado: import("@prisma/client-runtime-utils").Decimal | null;
         fecha_apartado: Date | null;
         vence_en: Date | null;
         status: boolean;
         id_apartado: number;
+        id_lead: number | null;
     }>;
     createVenta(createVentaDto: CreateVentaDto): Promise<{
         id_unidad: number;
         id_lead: number | null;
+        id_venta: number;
         precio_cierre: import("@prisma/client-runtime-utils").Decimal | null;
         fecha_cierre: Date | null;
         porc_comision: import("@prisma/client-runtime-utils").Decimal | null;
         monto_comision: import("@prisma/client-runtime-utils").Decimal | null;
-        id_venta: number;
     }>;
     findAllApartados(leadId?: number): Promise<({
         lead: {
-            estado: string;
             creado_en: Date;
             actualizado_en: Date;
             id_lead: number;
+            estado: string;
             id_contacto: number;
             id_servicio_principal: number | null;
             prioridad: string;
@@ -35,10 +35,10 @@ export declare class SalesService {
             notas_iniciales: string | null;
         } | null;
         unidad: {
-            descripcion: string | null;
             id_tipo_inmueble: number | null;
             id_estado_unidad: number | null;
             id_tipo_propiedad: number | null;
+            descripcion: string | null;
             id_desarrollo: number;
             id_tipologia: number | null;
             id_unidad: number;
@@ -54,19 +54,19 @@ export declare class SalesService {
         };
     } & {
         id_unidad: number;
-        id_lead: number | null;
         monto_apartado: import("@prisma/client-runtime-utils").Decimal | null;
         fecha_apartado: Date | null;
         vence_en: Date | null;
         status: boolean;
         id_apartado: number;
+        id_lead: number | null;
     })[]>;
     findAllVentas(leadId?: number): Promise<({
         lead: {
-            estado: string;
             creado_en: Date;
             actualizado_en: Date;
             id_lead: number;
+            estado: string;
             id_contacto: number;
             id_servicio_principal: number | null;
             prioridad: string;
@@ -74,10 +74,10 @@ export declare class SalesService {
             notas_iniciales: string | null;
         } | null;
         unidad: {
-            descripcion: string | null;
             id_tipo_inmueble: number | null;
             id_estado_unidad: number | null;
             id_tipo_propiedad: number | null;
+            descripcion: string | null;
             id_desarrollo: number;
             id_tipologia: number | null;
             id_unidad: number;
@@ -94,10 +94,10 @@ export declare class SalesService {
     } & {
         id_unidad: number;
         id_lead: number | null;
+        id_venta: number;
         precio_cierre: import("@prisma/client-runtime-utils").Decimal | null;
         fecha_cierre: Date | null;
         porc_comision: import("@prisma/client-runtime-utils").Decimal | null;
         monto_comision: import("@prisma/client-runtime-utils").Decimal | null;
-        id_venta: number;
     })[]>;
 }

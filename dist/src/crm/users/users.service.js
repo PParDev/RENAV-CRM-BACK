@@ -52,36 +52,40 @@ let UsersService = class UsersService {
         this.prisma = prisma;
     }
     excludePassword(user) {
-        const { passwordHash, ...userWithoutPassword } = user;
+        const { password_hash, ...userWithoutPassword } = user;
         return userWithoutPassword;
     }
     async create(createUserDto) {
         const { password, ...rest } = createUserDto;
-        const existingUser = await this.prisma.user.findUnique({
+        const existingUser = await this.prisma.crmUsuario.findUnique({
             where: { email: rest.email },
         });
         if (existingUser) {
             throw new common_1.ConflictException('Email already exists');
         }
         const salt = await bcrypt.genSalt();
-        const passwordHash = await bcrypt.hash(password, salt);
-        const user = await this.prisma.user.create({
+        const password_hash = await bcrypt.hash(password, salt);
+        const user = await this.prisma.crmUsuario.create({
             data: {
-                ...rest,
-                passwordHash,
+                nombre: rest.nombre,
+                email: rest.email,
+                rol: rest.role,
+                telefono: rest.telefono,
+                activo: rest.activo,
+                password_hash,
             },
         });
         return this.excludePassword(user);
     }
     async findAll(role) {
-        const users = await this.prisma.user.findMany({
-            where: role ? { role } : undefined,
+        const users = await this.prisma.crmUsuario.findMany({
+            where: role ? { rol: role } : undefined,
         });
         return users.map((user) => this.excludePassword(user));
     }
     async findOne(id) {
-        const user = await this.prisma.user.findUnique({
-            where: { id },
+        const user = await this.prisma.crmUsuario.findUnique({
+            where: { id_usuario: +id },
         });
         if (!user) {
             throw new common_1.NotFoundException(`User with ID ${id} not found`);
@@ -89,20 +93,30 @@ let UsersService = class UsersService {
         return this.excludePassword(user);
     }
     async findByEmail(email) {
-        return this.prisma.user.findUnique({
+        return this.prisma.crmUsuario.findUnique({
             where: { email },
         });
     }
     async update(id, updateUserDto) {
-        const { password, ...rest } = updateUserDto;
-        const updateData = { ...rest };
+        const { password, nombre, role, email, telefono, activo } = updateUserDto;
+        const updateData = {};
+        if (nombre)
+            updateData.nombre = nombre;
+        if (role)
+            updateData.rol = role;
+        if (email)
+            updateData.email = email;
+        if (telefono)
+            updateData.telefono = telefono;
+        if (activo !== undefined)
+            updateData.activo = activo;
         if (password) {
             const salt = await bcrypt.genSalt();
-            updateData.passwordHash = await bcrypt.hash(password, salt);
+            updateData.password_hash = await bcrypt.hash(password, salt);
         }
         try {
-            const user = await this.prisma.user.update({
-                where: { id },
+            const user = await this.prisma.crmUsuario.update({
+                where: { id_usuario: +id },
                 data: updateData,
             });
             return this.excludePassword(user);
@@ -116,8 +130,8 @@ let UsersService = class UsersService {
     }
     async remove(id) {
         try {
-            const user = await this.prisma.user.delete({
-                where: { id },
+            const user = await this.prisma.crmUsuario.delete({
+                where: { id_usuario: +id },
             });
             return this.excludePassword(user);
         }

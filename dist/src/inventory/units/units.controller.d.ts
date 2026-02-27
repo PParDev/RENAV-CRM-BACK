@@ -5,10 +5,10 @@ export declare class UnitsController {
     private readonly unitsService;
     constructor(unitsService: UnitsService);
     create(createUnitDto: CreateUnitDto): Promise<{
-        descripcion: string | null;
         id_tipo_inmueble: number | null;
         id_estado_unidad: number | null;
         id_tipo_propiedad: number | null;
+        descripcion: string | null;
         id_desarrollo: number;
         id_tipologia: number | null;
         id_unidad: number;
@@ -23,10 +23,10 @@ export declare class UnitsController {
         fecha_terminacion: Date | null;
     }>;
     findAll(skip?: number, take?: number, desarrolloId?: number, codigo?: string): Promise<{
-        descripcion: string | null;
         id_tipo_inmueble: number | null;
         id_estado_unidad: number | null;
         id_tipo_propiedad: number | null;
+        descripcion: string | null;
         id_desarrollo: number;
         id_tipologia: number | null;
         id_unidad: number;
@@ -41,10 +41,10 @@ export declare class UnitsController {
         fecha_terminacion: Date | null;
     }[]>;
     findOne(id: number): Promise<{
-        descripcion: string | null;
         id_tipo_inmueble: number | null;
         id_estado_unidad: number | null;
         id_tipo_propiedad: number | null;
+        descripcion: string | null;
         id_desarrollo: number;
         id_tipologia: number | null;
         id_unidad: number;
@@ -59,10 +59,10 @@ export declare class UnitsController {
         fecha_terminacion: Date | null;
     }>;
     update(id: number, updateUnitDto: UpdateUnitDto): Promise<{
-        descripcion: string | null;
         id_tipo_inmueble: number | null;
         id_estado_unidad: number | null;
         id_tipo_propiedad: number | null;
+        descripcion: string | null;
         id_desarrollo: number;
         id_tipologia: number | null;
         id_unidad: number;
@@ -77,10 +77,10 @@ export declare class UnitsController {
         fecha_terminacion: Date | null;
     }>;
     remove(id: number): Promise<{
-        descripcion: string | null;
         id_tipo_inmueble: number | null;
         id_estado_unidad: number | null;
         id_tipo_propiedad: number | null;
+        descripcion: string | null;
         id_desarrollo: number;
         id_tipologia: number | null;
         id_unidad: number;

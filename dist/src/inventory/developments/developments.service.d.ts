@@ -9,8 +9,8 @@ export declare class DevelopmentsService {
     create(createDevelopmentDto: CreateDevelopmentDto): Promise<InvDesarrollo>;
     addTypology(desarrolloId: number, dto: CreateTypologyDto): Promise<{
         nombre: string;
-        total_unidades: number | null;
         id_desarrollo: number;
+        total_unidades: number | null;
         id_tipologia: number;
     }>;
     findAll(skip?: number, take?: number, ciudad?: number, desarrollador?: number, search?: string): Promise<InvDesarrollo[]>;

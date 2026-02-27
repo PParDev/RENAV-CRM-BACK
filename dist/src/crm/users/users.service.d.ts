@@ -1,8 +1,8 @@
 import { PrismaService } from '../../database/prisma.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
-import { User, Role } from '@prisma/client';
-export type UserWithoutPassword = Omit<User, 'passwordHash'>;
+import { Role, CrmUsuario } from '@prisma/client';
+export type UserWithoutPassword = Omit<CrmUsuario, 'password_hash'>;
 export declare class UsersService {
     private readonly prisma;
     constructor(prisma: PrismaService);
@@ -10,7 +10,7 @@ export declare class UsersService {
     create(createUserDto: CreateUserDto): Promise<UserWithoutPassword>;
     findAll(role?: Role): Promise<UserWithoutPassword[]>;
     findOne(id: string): Promise<UserWithoutPassword>;
-    findByEmail(email: string): Promise<User | null>;
+    findByEmail(email: string): Promise<CrmUsuario | null>;
     update(id: string, updateUserDto: UpdateUserDto): Promise<UserWithoutPassword>;
     remove(id: string): Promise<UserWithoutPassword>;
 }

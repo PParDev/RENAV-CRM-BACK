@@ -6,15 +6,15 @@ export declare class PricesController {
     addPriceToUnit(id: number, dto: CreatePriceHistoryDto): Promise<{
         id_unidad: number;
         vigente_desde: Date;
+        id_precio_historico: number;
         precio: import("@prisma/client-runtime-utils").Decimal;
         vigente_hasta: Date | null;
-        id_precio_historico: number;
     }>;
     getPriceHistory(id: number): Promise<{
         id_unidad: number;
         vigente_desde: Date;
+        id_precio_historico: number;
         precio: import("@prisma/client-runtime-utils").Decimal;
         vigente_hasta: Date | null;
-        id_precio_historico: number;
     }[]>;
 }

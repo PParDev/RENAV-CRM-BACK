@@ -8,50 +8,50 @@ export declare class ActivitiesController {
         descripcion: string | null;
         id_lead: number;
         creada_en: Date;
+        id_actividad: number;
         tipo: string;
         programada_para: Date | null;
-        creada_por: number | null;
-        id_actividad: number;
         realizada_en: Date | null;
+        creada_por: number | null;
     }>;
     findAll(leadId?: number): Promise<{
         descripcion: string | null;
         id_lead: number;
         creada_en: Date;
+        id_actividad: number;
         tipo: string;
         programada_para: Date | null;
-        creada_por: number | null;
-        id_actividad: number;
         realizada_en: Date | null;
+        creada_por: number | null;
     }[]>;
     findOne(id: number): Promise<{
         descripcion: string | null;
         id_lead: number;
         creada_en: Date;
+        id_actividad: number;
         tipo: string;
         programada_para: Date | null;
-        creada_por: number | null;
-        id_actividad: number;
         realizada_en: Date | null;
+        creada_por: number | null;
     }>;
     update(id: number, updateActivityDto: UpdateActivityDto): Promise<{
         descripcion: string | null;
         id_lead: number;
         creada_en: Date;
+        id_actividad: number;
         tipo: string;
         programada_para: Date | null;
-        creada_por: number | null;
-        id_actividad: number;
         realizada_en: Date | null;
+        creada_por: number | null;
     }>;
     remove(id: number): Promise<{
         descripcion: string | null;
         id_lead: number;
         creada_en: Date;
+        id_actividad: number;
         tipo: string;
         programada_para: Date | null;
-        creada_por: number | null;
-        id_actividad: number;
         realizada_en: Date | null;
+        creada_por: number | null;
     }>;
 }

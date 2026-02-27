@@ -6,37 +6,37 @@ export declare class DevelopersController {
     constructor(developersService: DevelopersService);
     create(createDeveloperDto: CreateDeveloperDto): Promise<{
         nombre: string;
+        id_desarrollador: number;
         ubicacion: string | null;
         email: string | null;
         telefono: string | null;
-        id_desarrollador: number;
     }>;
     findAll(search?: string): Promise<{
         nombre: string;
+        id_desarrollador: number;
         ubicacion: string | null;
         email: string | null;
         telefono: string | null;
-        id_desarrollador: number;
     }[]>;
     findOne(id: number): Promise<{
         nombre: string;
+        id_desarrollador: number;
         ubicacion: string | null;
         email: string | null;
         telefono: string | null;
-        id_desarrollador: number;
     }>;
     update(id: number, updateDeveloperDto: UpdateDeveloperDto): Promise<{
         nombre: string;
+        id_desarrollador: number;
         ubicacion: string | null;
         email: string | null;
         telefono: string | null;
-        id_desarrollador: number;
     }>;
     remove(id: number): Promise<{
         nombre: string;
+        id_desarrollador: number;
         ubicacion: string | null;
         email: string | null;
         telefono: string | null;
-        id_desarrollador: number;
     }>;
 }
