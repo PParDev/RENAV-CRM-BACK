@@ -6,6 +6,8 @@ import { UnitsModule } from './units/units.module';
 import { SalesModule } from './sales/sales.module';
 import { PricesModule } from './prices/prices.module';
 import { CitiesModule } from './cities/cities.module';
+import { TypologiesModule } from './typologies/typologies.module';
+import { ApartadosModule } from './apartados/apartados.module';
 
 @Module({
     imports: [
@@ -14,7 +16,9 @@ import { CitiesModule } from './cities/cities.module';
         UnitsModule,
         SalesModule,
         PricesModule,
-        CitiesModule
+        CitiesModule,
+        TypologiesModule,
+        ApartadosModule
     ],
 })
 export class InventoryModule { }
