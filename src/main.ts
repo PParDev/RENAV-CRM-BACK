@@ -7,15 +7,22 @@ import { AppModule } from './app.module';
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
+  // Habilitar CORS para que el frontend pueda hacer peticiones
+  app.enableCors({
+    origin: 'http://localhost:5173', // Must be specific when credentials: true
+    methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
+    credentials: true,
+  });
+
   // Prefijo global: /api
   app.setGlobalPrefix('api');
 
   // Validación global de DTOs
   app.useGlobalPipes(
     new ValidationPipe({
-      whitelist: true,       
-      forbidNonWhitelisted: true, 
-      transform: true,           
+      whitelist: true,
+      forbidNonWhitelisted: true,
+      transform: true,
     }),
   );
 

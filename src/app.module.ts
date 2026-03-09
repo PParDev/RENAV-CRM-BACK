@@ -5,8 +5,11 @@ import { InventoryModule } from './inventory/inventory.module';
 import { DatabaseModule } from './database/database.module';
 import { CrmModule } from './crm/crm.module';
 
+import { ConfigModule } from '@nestjs/config';
+
 @Module({
   imports: [
+    ConfigModule.forRoot({ isGlobal: true }),
     DatabaseModule,
     AuthModule,
     CatalogsModule,

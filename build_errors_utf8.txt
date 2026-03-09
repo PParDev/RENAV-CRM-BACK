@@ -1,0 +1,98 @@
+﻿
+> crm-inmobiliario-backend@0.0.1 build
+> nest build
+
+node.exe : [96msrc/au
+th/auth.module.ts[0m:
+[93m12[0m:[93m7[0m
+ - 
+[91merror[0m[90m 
+TS2322: [0mType 
+'(configService: 
+ConfigService) => 
+Promise<{ secret: 
+string; signOptions: 
+{ expiresIn: string; 
+}; }>' is not 
+assignable to type 
+'(...args: any[]) => 
+JwtModuleOptions | Pro
+mise<JwtModuleOptions>
+'.
+En C:\Program 
+Files\nodejs\npm.ps1: 
+29 Carácter: 3
++   & $NODE_EXE 
+$NPM_CLI_JS $args
++   ~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~
+    + CategoryInfo    
+          : NotSpeci  
+  fied: ([96msrc/a   
+ uth/a...oduleOpti    
+ons>'.:String) []    
+, RemoteException
+    + FullyQualifiedE 
+   rrorId : NativeCo  
+  mmandError
+ 
+  Type 'Promise<{ 
+secret: string; 
+signOptions: { 
+expiresIn: string; }; 
+}>' is not assignable 
+to type 
+'JwtModuleOptions | Pr
+omise<JwtModuleOptions
+>'.
+    Type 'Promise<{ 
+secret: string; 
+signOptions: { 
+expiresIn: string; }; 
+}>' is not assignable 
+to type 'Promise<JwtMo
+duleOptions>'.
+      Type '{ secret: 
+string; signOptions: 
+{ expiresIn: string; 
+}; }' is not 
+assignable to type 
+'JwtModuleOptions'.
+        The types of '
+signOptions.expiresIn'
+ are incompatible 
+between these types.
+          Type 
+'string' is not 
+assignable to type 
+'number | StringValue 
+| undefined'.
+
+[7m12[0m       
+useFactory: async 
+(configService: 
+ConfigService) => ({
+[7m  [0m [91m      
+~~~~~~~~~~[0m
+
+  [96mnode_modules/@n
+estjs/jwt/dist/interfa
+ces/jwt-module-options
+.interface.d.ts[0m:[
+93m24[0m:[93m5[0m
+    [7m24[0m     
+useFactory?: 
+(...args: any[]) => Pr
+omise<JwtModuleOptions
+> | JwtModuleOptions;
+    [7m  [0m [96m  
+  ~~~~~~~~~~[0m
+    The expected type 
+comes from property 
+'useFactory' which is 
+declared here on type 
+'JwtModuleAsyncOptions
+'
+
+Found 1 error(s).
+
