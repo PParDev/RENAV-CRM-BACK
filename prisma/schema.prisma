@@ -252,13 +252,14 @@ model CrmContacto {
 }
 
 model CrmUsuario {
-  id_usuario Int      @id @default(autoincrement())
-  nombre     String
-  email      String   @unique
-  telefono   String?
-  rol        String
-  activo     Boolean  @default(true)
-  creado_en  DateTime @default(now()) @db.Timestamptz
+  id_usuario    Int      @id @default(autoincrement())
+  nombre        String
+  email         String   @unique
+  telefono      String?
+  rol           String
+  password_hash String?
+  activo        Boolean  @default(true)
+  creado_en     DateTime @default(now()) @db.Timestamptz
 
   leads_asignados     CrmLead[]
   historial_etapas    CrmHistorialEtapaLead[]

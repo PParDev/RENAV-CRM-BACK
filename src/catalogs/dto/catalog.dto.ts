@@ -38,11 +38,6 @@ export class CreateTipoPropiedadDto {
     @ApiProperty({ required: false })
     @IsString()
     @IsOptional()
-    tipologia?: string;
-
-    @ApiProperty({ required: false })
-    @IsString()
-    @IsOptional()
     descripcion?: string;
 }
 
