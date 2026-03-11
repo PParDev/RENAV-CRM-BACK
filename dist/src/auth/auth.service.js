@@ -9,6 +9,17 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.AuthService = void 0;
 const common_1 = require("@nestjs/common");
 let AuthService = class AuthService {
+    login(body) {
+        const { email, password } = body;
+        if (email === 'amir@empresa.com' && password === 'Holaa123') {
+            return {
+                access_token: 'token_de_prueba_123456'
+            };
+        }
+        return {
+            message: 'Credenciales inválidas'
+        };
+    }
 };
 exports.AuthService = AuthService;
 exports.AuthService = AuthService = __decorate([
