@@ -20,17 +20,23 @@ let AuthController = class AuthController {
     constructor(authService) {
         this.authService = authService;
     }
-    login(body) {
-        return this.authService.login(body);
+    async login(email, password) {
+        if (!email || !password) {
+            throw new common_1.UnauthorizedException('Correo y contraseña son requeridos');
+        }
+        const user = await this.authService.validateUser(email, password);
+        return this.authService.login(user);
     }
 };
 exports.AuthController = AuthController;
 __decorate([
     (0, common_1.Post)('login'),
-    __param(0, (0, common_1.Body)()),
+    (0, common_1.HttpCode)(common_1.HttpStatus.OK),
+    __param(0, (0, common_1.Body)('email')),
+    __param(1, (0, common_1.Body)('password')),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Object]),
-    __metadata("design:returntype", void 0)
+    __metadata("design:paramtypes", [String, String]),
+    __metadata("design:returntype", Promise)
 ], AuthController.prototype, "login", null);
 exports.AuthController = AuthController = __decorate([
     (0, common_1.Controller)('auth'),
