@@ -77,26 +77,43 @@ let AuthService = class AuthService {
     codigos = {};
     async enviarCodigo(email) {
         const codigo = Math.floor(100000 + Math.random() * 900000);
-        this.codigos[email] = codigo;
+        const expiracion = new Date();
+        expiracion.setMinutes(expiracion.getMinutes() + 15);
+        this.codigos[email] = {
+            codigo,
+            expiracion,
+        };
         const transporter = nodemailer.createTransport({
             service: 'gmail',
             auth: {
                 user: 'renavcrm@gmail.com',
-                pass: 'bgyu dued pdpx dwhy',
+                pass: 'bvvh pkwl qcui rpfg',
             },
         });
-        await transporter.sendMail({
+        const info = await transporter.sendMail({
             from: '"RENAV CRM" <renavcrm@gmail.com>',
             to: email,
             subject: 'Código de recuperación',
-            text: `Tu código es: ${codigo}`,
+            text: `Tu código de recuperación es: ${codigo}\n\nEste código expirará en 15 minutos.`,
         });
+        console.log('Mensaje enviado: %s', info.messageId);
         return { message: 'Código enviado' };
     }
     async resetPassword(data) {
         const { email, codigo, nuevaPassword } = data;
-        if (this.codigos[email] != codigo) {
-            return { message: "Código incorrecto" };
+        if (!email || !codigo || !nuevaPassword) {
+            throw new common_1.UnauthorizedException("Faltan datos requeridos (email, código o nueva contraseña)");
+        }
+        const record = this.codigos[email];
+        if (!record) {
+            throw new common_1.UnauthorizedException("No se ha solicitado un cambio de contraseña o el código ha expirado");
+        }
+        if (new Date() > record.expiracion) {
+            delete this.codigos[email];
+            throw new common_1.UnauthorizedException("El código ha expirado, solicita uno nuevo.");
+        }
+        if (record.codigo.toString() !== codigo.toString()) {
+            throw new common_1.UnauthorizedException("Código incorrecto");
         }
         const hashedPassword = await bcrypt.hash(nuevaPassword, 10);
         await this.prisma.crmUsuario.update({
