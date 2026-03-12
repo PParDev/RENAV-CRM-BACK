@@ -8,4 +8,11 @@ export declare class AuthService {
     login(user: any): Promise<{
         access_token: string;
     }>;
+    private codigos;
+    enviarCodigo(email: string): Promise<{
+        message: string;
+    }>;
+    resetPassword(data: any): Promise<{
+        message: string;
+    }>;
 }

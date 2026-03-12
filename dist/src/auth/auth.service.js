@@ -47,6 +47,7 @@ const common_1 = require("@nestjs/common");
 const jwt_1 = require("@nestjs/jwt");
 const prisma_service_1 = require("../database/prisma.service");
 const bcrypt = __importStar(require("bcrypt"));
+const nodemailer = __importStar(require("nodemailer"));
 let AuthService = class AuthService {
     prisma;
     jwtService;
@@ -71,6 +72,42 @@ let AuthService = class AuthService {
         const payload = { email: user.email, sub: user.id_usuario, role: user.rol };
         return {
             access_token: this.jwtService.sign(payload),
+        };
+    }
+    codigos = {};
+    async enviarCodigo(email) {
+        const codigo = Math.floor(100000 + Math.random() * 900000);
+        this.codigos[email] = codigo;
+        const transporter = nodemailer.createTransport({
+            service: 'gmail',
+            auth: {
+                user: 'renavcrm@gmail.com',
+                pass: 'bgyu dued pdpx dwhy',
+            },
+        });
+        await transporter.sendMail({
+            from: '"RENAV CRM" <renavcrm@gmail.com>',
+            to: email,
+            subject: 'Código de recuperación',
+            text: `Tu código es: ${codigo}`,
+        });
+        return { message: 'Código enviado' };
+    }
+    async resetPassword(data) {
+        const { email, codigo, nuevaPassword } = data;
+        if (this.codigos[email] != codigo) {
+            return { message: "Código incorrecto" };
+        }
+        const hashedPassword = await bcrypt.hash(nuevaPassword, 10);
+        await this.prisma.crmUsuario.update({
+            where: { email },
+            data: {
+                password_hash: hashedPassword
+            }
+        });
+        delete this.codigos[email];
+        return {
+            message: "Contraseña actualizada correctamente"
         };
     }
 };

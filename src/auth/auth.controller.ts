@@ -5,6 +5,16 @@ import { AuthService } from './auth.service';
 export class AuthController {
     constructor(private readonly authService: AuthService) { }
 
+    @Post('recuperar')
+    recuperar(@Body() body) {
+    return this.authService.enviarCodigo(body.email);
+    }
+
+    @Post('reset-password')
+    reset(@Body() body) {
+    return this.authService.resetPassword(body);
+    }
+
     @Post('login')
     @HttpCode(HttpStatus.OK)
     async login(

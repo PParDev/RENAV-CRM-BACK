@@ -20,6 +20,12 @@ let AuthController = class AuthController {
     constructor(authService) {
         this.authService = authService;
     }
+    recuperar(body) {
+        return this.authService.enviarCodigo(body.email);
+    }
+    reset(body) {
+        return this.authService.resetPassword(body);
+    }
     async login(email, password) {
         if (!email || !password) {
             throw new common_1.UnauthorizedException('Correo y contraseña son requeridos');
@@ -29,6 +35,20 @@ let AuthController = class AuthController {
     }
 };
 exports.AuthController = AuthController;
+__decorate([
+    (0, common_1.Post)('recuperar'),
+    __param(0, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object]),
+    __metadata("design:returntype", void 0)
+], AuthController.prototype, "recuperar", null);
+__decorate([
+    (0, common_1.Post)('reset-password'),
+    __param(0, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object]),
+    __metadata("design:returntype", void 0)
+], AuthController.prototype, "reset", null);
 __decorate([
     (0, common_1.Post)('login'),
     (0, common_1.HttpCode)(common_1.HttpStatus.OK),
