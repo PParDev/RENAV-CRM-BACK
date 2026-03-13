@@ -86,12 +86,12 @@ let AuthService = class AuthService {
         const transporter = nodemailer.createTransport({
             service: 'gmail',
             auth: {
-                user: 'renavcrm@gmail.com',
-                pass: 'bvvh pkwl qcui rpfg',
+                user: 'renavcontactocrm@gmail.com',
+                pass: 'weag nwkk abcf nyrj',
             },
         });
         const info = await transporter.sendMail({
-            from: '"RENAV CRM" <renavcrm@gmail.com>',
+            from: '"RENAV CONTACTO CRM" <renavcontactocrm@gmail.com>',
             to: email,
             subject: 'Código de recuperación',
             text: `Tu código de recuperación es: ${codigo}\n\nEste código expirará en 15 minutos.`,
