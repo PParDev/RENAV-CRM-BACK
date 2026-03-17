@@ -57,6 +57,19 @@ export class LeadsService {
                 contacto: true,
                 usuario_asignado: true,
                 servicio_principal: true,
+                solicitudes: {
+                    include: {
+                        servicio: true,
+                        bienes_raices: {
+                            include: {
+                                tipo_inmueble: true,
+                            }
+                        },
+                        arquitectura: { include: { tipo_proyecto: true, subtipo_habitacional: true } },
+                        construccion: { include: { tipo_proyecto: true, subtipo_habitacional: true } },
+                        avaluo: true
+                    }
+                }
             },
             orderBy: { creado_en: 'desc' },
         });
