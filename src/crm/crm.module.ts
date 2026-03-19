@@ -7,6 +7,7 @@ import { ServiceRequestsModule } from './service-requests/service-requests.modul
 import { PipelinesModule } from './pipelines/pipelines.module';
 import { LeadHistoryModule } from './lead-history/lead-history.module';
 import { LeadServicesModule } from './lead-services/lead-services.module';
+import { MensajesModule } from './mensajes/mensajes.module';
 
 @Module({
     imports: [
@@ -18,6 +19,7 @@ import { LeadServicesModule } from './lead-services/lead-services.module';
         PipelinesModule,
         LeadHistoryModule,
         LeadServicesModule,
+        MensajesModule,
     ],
 })
 export class CrmModule { }

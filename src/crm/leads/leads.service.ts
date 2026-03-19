@@ -84,6 +84,7 @@ export class LeadsService {
                 usuario_asignado: true,
                 servicio_principal: true,
                 actividades: { orderBy: { creada_en: 'desc' } },
+                mensajes: { orderBy: { creado_en: 'asc' } },
                 solicitudes: true,
                 historial_etapas: { orderBy: { cambiado_en: 'desc' }, include: { etapa: true, usuario: true } },
             },

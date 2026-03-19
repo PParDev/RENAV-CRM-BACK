@@ -264,6 +264,7 @@ model CrmUsuario {
   leads_asignados     CrmLead[]
   historial_etapas    CrmHistorialEtapaLead[]
   actividades_creadas CrmActividad[]
+  mensajes_enviados   CrmMensaje[]
 
   @@map("crm_usuario")
   @@schema("crm")
@@ -287,6 +288,7 @@ model CrmLead {
   servicios        CrmLeadServicio[]
   historial_etapas CrmHistorialEtapaLead[]
   actividades      CrmActividad[]
+  mensajes         CrmMensaje[]
   solicitudes      CrmSolicitudServicio[]
   apartados        InvApartado[]
   ventas           InvVenta[]
@@ -364,6 +366,27 @@ model CrmActividad {
   @@schema("crm")
   @@index([id_lead])
   @@index([programada_para])
+}
+
+model CrmMensaje {
+  id_mensaje         Int      @id @default(autoincrement())
+  id_lead            Int
+  id_usuario         Int?
+  es_entrante        Boolean
+  canal              String   @default("WEB") // WHATSAPP, EMAIL, WEB, META, SMS
+  texto              String
+  media_url          String?
+  whatsapp_msg_id    String?  @unique
+  estatus_entrega    String   @default("ENVIADO") // ENTREGADO, LEIDO, FALLIDO
+  creado_en          DateTime @default(now()) @db.Timestamptz
+
+  lead               CrmLead     @relation(fields: [id_lead], references: [id_lead], onDelete: Cascade)
+  usuario            CrmUsuario? @relation(fields: [id_usuario], references: [id_usuario], onDelete: SetNull)
+
+  @@map("crm_mensaje")
+  @@schema("crm")
+  @@index([id_lead])
+  @@index([creado_en])
 }
 
 model CrmSolicitudServicio {
