@@ -72,4 +72,24 @@ export class CreateUnitDto {
     @IsDateString()
     @IsOptional()
     fecha_terminacion?: string;
+
+    @ApiProperty({ required: false })
+    @IsString()
+    @IsOptional()
+    imagen_url?: string;
+
+    @ApiProperty({ required: false, description: 'Nivel o piso dentro del desarrollo (ej. PB, 1, 3A)' })
+    @IsString()
+    @IsOptional()
+    nivel_piso?: string;
+
+    @ApiProperty({ required: false, description: 'Tipo de proyecto: RESIDENCIAL, COMERCIAL, etc.' })
+    @IsString()
+    @IsOptional()
+    tipo_proyecto?: string;
+
+    @ApiProperty({ required: false, description: 'Porcentaje de comisión a nivel de unidad (sobreescribe el del desarrollo)' })
+    @IsNumber()
+    @IsOptional()
+    porcentaje_comision?: number;
 }

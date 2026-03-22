@@ -42,4 +42,29 @@ export class CreateDevelopmentDto {
     @IsNumber()
     @IsOptional()
     porcentaje_comision?: number;
+
+    @ApiProperty({ required: false, description: 'Alcance del proyecto: LOCAL o NACIONAL' })
+    @IsString()
+    @IsOptional()
+    alcance?: string;
+
+    @ApiProperty({ required: false, description: 'Porcentaje de comisión para el vendedor' })
+    @IsNumber()
+    @IsOptional()
+    comision_vendedor?: number;
+
+    @ApiProperty({ required: false, description: 'Condiciones de pago al contado' })
+    @IsString()
+    @IsOptional()
+    metodo_contado?: string;
+
+    @ApiProperty({ required: false, description: 'Condiciones de crédito hipotecario' })
+    @IsString()
+    @IsOptional()
+    metodo_hipotecario?: string;
+
+    @ApiProperty({ required: false, description: 'Condiciones de financiamiento propio' })
+    @IsString()
+    @IsOptional()
+    metodo_financiamiento?: string;
 }

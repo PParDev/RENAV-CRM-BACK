@@ -15,6 +15,12 @@ export class UnitsController {
         return this.unitsService.create(createUnitDto);
     }
 
+    @Post('bulk')
+    createBulk(@Body() body: any) {
+        const units: CreateUnitDto[] = Array.isArray(body.units) ? body.units : [];
+        return Promise.all(units.map(u => this.unitsService.create(u)));
+    }
+
     @Get()
     @ApiQuery({ name: 'skip', required: false, type: Number })
     @ApiQuery({ name: 'take', required: false, type: Number })

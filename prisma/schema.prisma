@@ -538,9 +538,14 @@ model InvDesarrollo {
   nivel_certeza_legal Int?
   cat_estado_doc      Int?
   id_origen_proyecto  Int?
-  porcentaje_comision Decimal? @db.Decimal(8, 4)
-  creado_en           DateTime @default(now()) @db.Timestamptz
-  actualizado_en      DateTime @default(now()) @updatedAt @db.Timestamptz
+  alcance               String?
+  porcentaje_comision   Decimal? @db.Decimal(8, 4)
+  comision_vendedor     Decimal? @db.Decimal(8, 4)
+  metodo_contado        String?
+  metodo_hipotecario    String?
+  metodo_financiamiento String?
+  creado_en             DateTime @default(now()) @db.Timestamptz
+  actualizado_en        DateTime @default(now()) @updatedAt @db.Timestamptz
 
   inv_ciudad          InvCiudad?                      @relation(fields: [ciudad], references: [id_inv_ciudad])
   desarrollador       InvDesarrollador?               @relation(fields: [id_desarrollador], references: [id_desarrollador])
@@ -591,6 +596,10 @@ model InvUnidad {
   id_tipo_propiedad     Int?
   fecha_obtencion       DateTime? @db.Date
   fecha_terminacion     DateTime? @db.Date
+  imagen_url            String?
+  tipo_proyecto         String?
+  nivel_piso            String?
+  porcentaje_comision   Decimal?  @db.Decimal(8, 4)
 
   desarrollo     InvDesarrollo      @relation(fields: [id_desarrollo], references: [id_desarrollo], onDelete: Cascade)
   tipologia      InvTipologia?      @relation(fields: [id_tipologia], references: [id_tipologia])
