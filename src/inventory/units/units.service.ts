@@ -1,5 +1,5 @@
 
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException, InternalServerErrorException } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
 import { CreateUnitDto } from './dto/create-unit.dto';
 import { UpdateUnitDto } from './dto/update-unit.dto';
@@ -14,6 +14,32 @@ export class UnitsService {
         return this.prisma.invUnidad.create({
             data: createUnitDto,
         });
+    }
+
+    // Crea masivamente un arreglo de unidades
+    async createBulk(createUnitsDto: CreateUnitDto[]): Promise<{ count: number }> {
+        try {
+            const dataToInsert = createUnitsDto.map(unit => {
+                const mapped: any = { ...unit };
+                if (mapped.fecha_obtencion) {
+                    mapped.fecha_obtencion = new Date(mapped.fecha_obtencion).toISOString();
+                }
+                if (mapped.fecha_terminacion) {
+                    mapped.fecha_terminacion = new Date(mapped.fecha_terminacion).toISOString();
+                }
+                return mapped;
+            });
+            const result = await this.prisma.invUnidad.createMany({
+                data: dataToInsert,
+            });
+            return { count: result.count };
+        } catch (error: any) {
+            console.error('BULK CREATE ERROR:', error);
+            if (error.code === 'P2002') {
+                throw new BadRequestException('Uno o más códigos de unidad ya están registrados en este desarrollo.');
+            }
+            throw new InternalServerErrorException(error.message || 'Error inesperado al crear las propiedades masivas.');
+        }
     }
 
     // Obtiene un listado de unidades, filtrables por desarrollo o código

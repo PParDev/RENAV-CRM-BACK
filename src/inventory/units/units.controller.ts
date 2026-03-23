@@ -18,7 +18,8 @@ export class UnitsController {
     @Post('bulk')
     createBulk(@Body() body: any) {
         const units: CreateUnitDto[] = Array.isArray(body.units) ? body.units : [];
-        return Promise.all(units.map(u => this.unitsService.create(u)));
+        if (units.length === 0) return { count: 0 };
+        return this.unitsService.createBulk(units);
     }
 
     @Get()
