@@ -58,7 +58,7 @@ export class UnitsService {
             take,
             where,
             include: {
-                desarrollo: true,
+                desarrollo: { include: { zona: true } },
                 tipologia: true,
                 tipo_inmueble: true,
                 estado_unidad: true,
@@ -73,7 +73,7 @@ export class UnitsService {
         const unit = await this.prisma.invUnidad.findUnique({
             where: { id_unidad: id },
             include: {
-                desarrollo: true,
+                desarrollo: { include: { zona: true } },
                 tipologia: true,
                 tipo_inmueble: true,
                 estado_unidad: true,
