@@ -10,14 +10,23 @@ export class DevelopersService {
     constructor(private readonly prisma: PrismaService) { }
 
     // Da de alta a un nuevo desarrollador inmobiliario
-    async create(createDeveloperDto: CreateDeveloperDto): Promise<InvDesarrollador> {
+    async create(createDeveloperDto: CreateDeveloperDto) {
+        const { zonas, ...data } = createDeveloperDto;
         return this.prisma.invDesarrollador.create({
-            data: createDeveloperDto,
+            data: {
+                ...data,
+                ...(zonas && zonas.length > 0 ? {
+                    zonas: {
+                        create: zonas.map(id_zona => ({ id_zona }))
+                    }
+                } : {})
+            },
+            include: { zonas: true },
         });
     }
 
     // Lista a todos los desarrolladores, permitiendo buscar por su nombre
-    async findAll(search?: string): Promise<InvDesarrollador[]> {
+    async findAll(search?: string) {
         const where = search ? {
             nombre: { contains: search, mode: 'insensitive' as const },
         } : undefined;
@@ -25,13 +34,15 @@ export class DevelopersService {
         return this.prisma.invDesarrollador.findMany({
             where,
             orderBy: { nombre: 'asc' },
+            include: { zonas: { include: { zona: true } } },
         });
     }
 
     // Obtiene la información detallada de un desarrollador en específico
-    async findOne(id: number): Promise<InvDesarrollador> {
+    async findOne(id: number) {
         const developer = await this.prisma.invDesarrollador.findUnique({
             where: { id_desarrollador: id },
+            include: { zonas: { include: { zona: true } } },
         });
 
         if (!developer) {
@@ -42,11 +53,21 @@ export class DevelopersService {
     }
 
     // Actualiza los datos de un desarrollador
-    async update(id: number, updateDeveloperDto: UpdateDeveloperDto): Promise<InvDesarrollador> {
+    async update(id: number, updateDeveloperDto: UpdateDeveloperDto) {
+        const { zonas, ...data } = updateDeveloperDto;
         try {
             return await this.prisma.invDesarrollador.update({
                 where: { id_desarrollador: id },
-                data: updateDeveloperDto,
+                data: {
+                    ...data,
+                    ...(zonas !== undefined ? {
+                        zonas: {
+                            deleteMany: {},
+                            create: zonas.map(id_zona => ({ id_zona }))
+                        }
+                    } : {})
+                },
+                include: { zonas: { include: { zona: true } } },
             });
         } catch (error) {
             // @ts-ignore
@@ -58,7 +79,7 @@ export class DevelopersService {
     }
 
     // Elimina un desarrollador de la base de datos
-    async remove(id: number): Promise<InvDesarrollador> {
+    async remove(id: number) {
         try {
             return await this.prisma.invDesarrollador.delete({
                 where: { id_desarrollador: id },

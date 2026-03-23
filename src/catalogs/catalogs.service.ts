@@ -215,6 +215,25 @@ export class CatalogsService {
         return this.prisma.catTipoPropiedad.delete({ where: { id_tipo_propiedad: id } });
     }
 
+    // ---- Zonas ----
+    async getZonas() {
+        return this.prisma.catZona.findMany({
+            orderBy: { nombre: 'asc' },
+        });
+    }
+
+    async createZona(data: CreateBaseCatalogDto) {
+        return this.prisma.catZona.create({ data });
+    }
+
+    async updateZona(id: number, data: UpdateBaseCatalogDto) {
+        return this.prisma.catZona.update({ where: { id_zona: id }, data });
+    }
+
+    async deleteZona(id: number) {
+        return this.prisma.catZona.delete({ where: { id_zona: id } });
+    }
+
     // // ---- Ciudades ----
     // async getCiudades() {
     //     return this.prisma.invCiudad.findMany({

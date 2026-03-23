@@ -239,6 +239,27 @@ export class CatalogsController {
         return this.catalogsService.deleteTipoPropiedad(id);
     }
 
+    // ---- Zonas ----
+    @Get('zonas')
+    getZonas() {
+        return this.catalogsService.getZonas();
+    }
+
+    @Post('zonas')
+    createZona(@Body() data: CreateBaseCatalogDto) {
+        return this.catalogsService.createZona(data);
+    }
+
+    @Patch('zonas/:id')
+    updateZona(@Param('id', ParseIntPipe) id: number, @Body() data: UpdateBaseCatalogDto) {
+        return this.catalogsService.updateZona(id, data);
+    }
+
+    @Delete('zonas/:id')
+    deleteZona(@Param('id', ParseIntPipe) id: number) {
+        return this.catalogsService.deleteZona(id);
+    }
+
     // // ---- Ciudades ----
     // @Get('ciudades')
     // getCiudades() {

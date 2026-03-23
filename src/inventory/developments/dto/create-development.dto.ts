@@ -41,6 +41,11 @@ export class CreateDevelopmentDto {
     @ApiProperty()
     @IsNumber()
     @IsOptional()
+    id_zona?: number;
+
+    @ApiProperty()
+    @IsNumber()
+    @IsOptional()
     porcentaje_comision?: number;
 
     @ApiProperty({ required: false, description: 'Alcance del proyecto: LOCAL o NACIONAL' })

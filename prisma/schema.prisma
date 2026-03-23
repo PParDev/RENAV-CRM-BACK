@@ -230,6 +230,18 @@ model CatSubtipoHabitacional {
   @@index([nombre])
 }
 
+model CatZona {
+  id_zona Int    @id @default(autoincrement())
+  codigo  String @unique
+  nombre  String
+
+  desarrolladores InvDesarrolladorZona[]
+  desarrollos     InvDesarrollo[]
+
+  @@map("cat_zona")
+  @@schema("cat")
+}
+
 // =========================================================
 // CRM (Schema: crm)
 // =========================================================
@@ -523,10 +535,23 @@ model InvDesarrollador {
   telefono         String?
 
   desarrollos InvDesarrollo[]
+  zonas       InvDesarrolladorZona[]
 
   @@map("inv_desarrollador")
   @@schema("inv")
   @@index([nombre])
+}
+
+model InvDesarrolladorZona {
+  id_desarrollador Int
+  id_zona          Int
+
+  desarrollador    InvDesarrollador @relation(fields: [id_desarrollador], references: [id_desarrollador], onDelete: Cascade)
+  zona             CatZona          @relation(fields: [id_zona], references: [id_zona], onDelete: Cascade)
+
+  @@id([id_desarrollador, id_zona])
+  @@map("inv_desarrollador_zona")
+  @@schema("inv")
 }
 
 model InvDesarrollo {
@@ -538,6 +563,7 @@ model InvDesarrollo {
   nivel_certeza_legal Int?
   cat_estado_doc      Int?
   id_origen_proyecto  Int?
+  id_zona             Int?
   alcance               String?
   porcentaje_comision   Decimal? @db.Decimal(8, 4)
   comision_vendedor     Decimal? @db.Decimal(8, 4)
@@ -553,6 +579,7 @@ model InvDesarrollo {
   certeza_legal       CatNivelCertezaLegal?           @relation(fields: [nivel_certeza_legal], references: [id_nivel])
   estado_doc          CatEstadoDocumentacion?         @relation(fields: [cat_estado_doc], references: [id_estado_doc])
   origen_proyecto     CatOrigenProyecto?              @relation(fields: [id_origen_proyecto], references: [id_origen_proyecto])
+  zona                CatZona?                        @relation(fields: [id_zona], references: [id_zona])
 
   tipologias InvTipologia[]
   unidades   InvUnidad[]

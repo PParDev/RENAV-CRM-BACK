@@ -11,9 +11,10 @@ export class DevelopmentsService {
     constructor(private readonly prisma: PrismaService) { }
 
     // Da de alta un nuevo desarrollo o proyecto inmobiliario
-    async create(createDevelopmentDto: CreateDevelopmentDto): Promise<InvDesarrollo> {
+    async create(createDevelopmentDto: CreateDevelopmentDto) {
         return this.prisma.invDesarrollo.create({
             data: createDevelopmentDto,
+            include: { zona: true },
         });
     }
 
@@ -62,6 +63,7 @@ export class DevelopmentsService {
                 certeza_legal: true,
                 estado_doc: true,
                 origen_proyecto: true,
+                zona: true,
             },
             orderBy: { creado_en: 'desc' },
         });
@@ -78,6 +80,7 @@ export class DevelopmentsService {
                 certeza_legal: true,
                 estado_doc: true,
                 origen_proyecto: true,
+                zona: true,
                 tipologias: true,
                 unidades: {
                     select: { id_unidad: true, codigo_unidad: true, precios_lista: true, m2_construccion: true, id_estado_unidad: true } // Simple list of units
@@ -93,11 +96,12 @@ export class DevelopmentsService {
     }
 
     // Actualiza la información principal de un desarrollo
-    async update(id: number, updateDevelopmentDto: UpdateDevelopmentDto): Promise<InvDesarrollo> {
+    async update(id: number, updateDevelopmentDto: UpdateDevelopmentDto) {
         try {
             return await this.prisma.invDesarrollo.update({
                 where: { id_desarrollo: id },
                 data: updateDevelopmentDto,
+                include: { zona: true },
             });
         } catch (error) {
             // @ts-ignore

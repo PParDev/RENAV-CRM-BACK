@@ -1,5 +1,4 @@
-
-import { IsNotEmpty, IsString, IsOptional, IsEmail } from 'class-validator';
+import { IsNotEmpty, IsString, IsOptional, IsEmail, IsArray, IsNumber } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 
 export class CreateDeveloperDto {
@@ -22,4 +21,10 @@ export class CreateDeveloperDto {
     @IsString()
     @IsOptional()
     telefono?: string;
+
+    @ApiProperty({ required: false, type: [Number] })
+    @IsArray()
+    @IsNumber({}, { each: true })
+    @IsOptional()
+    zonas?: number[];
 }
