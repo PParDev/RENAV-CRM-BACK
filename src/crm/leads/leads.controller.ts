@@ -36,6 +36,14 @@ export class LeadsController {
         return this.leadsService.findOne(id);
     }
 
+    @Get(':id/messages')
+    findMessages(
+        @Param('id', ParseIntPipe) id: number,
+        @Query('before', new DefaultValuePipe(0), ParseIntPipe) before: number,
+    ) {
+        return this.leadsService.findMessages(id, before || undefined);
+    }
+
     @Patch(':id')
     update(@Param('id', ParseIntPipe) id: number, @Body() updateLeadDto: UpdateLeadDto) {
         return this.leadsService.update(id, updateLeadDto);
