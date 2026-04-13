@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../database/prisma.service';
 
@@ -7,127 +7,172 @@ const MODEL = 'openai/gpt-4o-mini';
 
 // Catalog constants
 const ID_SERVICIO_BIENES_RAICES = 9;
-const TIPO_INMUEBLE_MAP: Record<string, number> = {
-    casa: 5,
-    departamento: 4,
-    depto: 4,
-    lote: 3,
-    terreno: 3,
-    bodega: 6,
-};
 
-// ─── Tool definitions ────────────────────────────────────────────────────────
-const TOOLS = [
-    {
-        type: 'function',
-        function: {
-            name: 'buscar_propiedades',
-            description:
-                'Busca propiedades disponibles en el inventario de RENAV según los criterios del cliente. Úsala cuando el cliente pregunte por opciones, precios, zonas, tamaños o tipos de inmueble.',
-            parameters: {
-                type: 'object',
-                properties: {
-                    tipo_inmueble: { type: 'string', description: 'Tipo: casa, departamento, lote, bodega' },
-                    precio_min: { type: 'number' },
-                    precio_max: { type: 'number' },
-                    m2_min: { type: 'number' },
-                    m2_max: { type: 'number' },
-                    zona: { type: 'string' },
-                },
-                required: [],
-            },
-        },
-    },
-    {
-        type: 'function',
-        function: {
-            name: 'actualizar_lead',
-            description:
-                'Actualiza el estado y/o prioridad del lead según el nivel de interés y calificación detectado en la conversación. Úsala cuando detectes cambios en el nivel de interés o avance en el proceso de compra.',
-            parameters: {
-                type: 'object',
-                properties: {
-                    estado: {
-                        type: 'string',
-                        enum: ['NUEVO', 'EN PROCESO', 'CALIFICADO', 'CERRADO', 'DESCARTADO', 'PERDIDO'],
-                        description: 'Nuevo estado del lead',
-                    },
-                    prioridad: {
-                        type: 'string',
-                        enum: ['BAJA', 'MEDIA', 'ALTA', 'URGENTE'],
-                        description: 'BAJA=solo curiosidad, MEDIA=interés real sin urgencia, ALTA=intención clara con presupuesto, URGENTE=listo para comprar o visitar',
-                    },
-                },
-                required: [],
-            },
-        },
-    },
-    {
-        type: 'function',
-        function: {
-            name: 'actualizar_perfil_inmobiliario',
-            description:
-                'Guarda o actualiza las preferencias inmobiliarias del cliente (tipo de propiedad, zona, presupuesto, recámaras, m², etc.) a medida que el cliente las menciona.',
-            parameters: {
-                type: 'object',
-                properties: {
-                    tipo_inmueble: { type: 'string', description: 'casa, departamento, lote, bodega' },
-                    ciudad: { type: 'string' },
-                    zona: { type: 'string' },
-                    presupuesto_min: { type: 'number' },
-                    presupuesto_max: { type: 'number' },
-                    recamaras: { type: 'number' },
-                    banos: { type: 'number' },
-                    m2_requeridos: { type: 'number' },
-                },
-                required: [],
-            },
-        },
-    },
-    {
-        type: 'function',
-        function: {
-            name: 'crear_nota',
-            description:
-                'Crea una nota interna o registra una llamada/tarea en el historial del lead. Úsala para dejar evidencia de información clave que el agente humano debe saber.',
-            parameters: {
-                type: 'object',
-                properties: {
-                    descripcion: { type: 'string', description: 'Contenido de la nota' },
-                    tipo: {
-                        type: 'string',
-                        enum: ['NOTE', 'CALL', 'TASK', 'WHATSAPP', 'EMAIL'],
-                        description: 'Tipo de actividad (NOTE por defecto)',
-                    },
-                },
-                required: ['descripcion'],
-            },
-        },
-    },
-    {
-        type: 'function',
-        function: {
-            name: 'agendar_cita',
-            description:
-                'Registra una cita o visita cuando el cliente muestra intención de ver una propiedad o reunirse con un asesor.',
-            parameters: {
-                type: 'object',
-                properties: {
-                    descripcion: { type: 'string', description: 'Descripción de la cita o visita' },
-                    fecha_iso: { type: 'string', description: 'Fecha y hora en formato ISO 8601. Omitir si no se especificó.' },
-                },
-                required: ['descripcion'],
-            },
-        },
-    },
-];
 
 @Injectable()
-export class AiService {
+export class AiService implements OnModuleInit {
+    // Mapa nombre/codigo → id_tipo_inmueble cargado desde BD al arrancar
+    private tipoInmuebleMap: Record<string, number> = {};
+    // Lista de nombres de tipos para el prompt de la IA
+    private tipoInmuebleNombres: string[] = [];
+
     constructor(
         private readonly prisma: PrismaService,
         private readonly config: ConfigService,
     ) {}
+
+    async onModuleInit() {
+        await this.cargarTiposInmueble();
+    }
+
+    private async cargarTiposInmueble() {
+        try {
+            const tipos = await this.prisma.catTipoInmueble.findMany();
+            this.tipoInmuebleMap = {};
+            this.tipoInmuebleNombres = [];
+            for (const t of tipos) {
+                const nombre = t.nombre.toLowerCase().trim();
+                const codigo = t.codigo.toLowerCase().trim();
+                this.tipoInmuebleMap[nombre] = t.id_tipo_inmueble;
+                this.tipoInmuebleMap[codigo] = t.id_tipo_inmueble;
+                this.tipoInmuebleNombres.push(t.nombre);
+            }
+            // Alias comunes
+            if (this.tipoInmuebleMap['departamento'] && !this.tipoInmuebleMap['depto']) {
+                this.tipoInmuebleMap['depto'] = this.tipoInmuebleMap['departamento'];
+            }
+        } catch (err) {
+            console.warn('[AiService] No se pudo cargar catálogo de tipos de inmueble:', (err as Error).message);
+        }
+    }
+
+    // ── Build tools with dynamic tipo_inmueble values ────────────────────────
+    private buildTools() {
+        const tiposDesc = this.tipoInmuebleNombres.length
+            ? this.tipoInmuebleNombres.join(', ')
+            : 'casa, departamento, lote, bodega';
+
+        return [
+            {
+                type: 'function',
+                function: {
+                    name: 'buscar_propiedades',
+                    description:
+                        'Busca propiedades disponibles en el inventario de RENAV según los criterios del cliente. Úsala cuando el cliente pregunte por opciones, precios, zonas, tamaños o tipos de inmueble.',
+                    parameters: {
+                        type: 'object',
+                        properties: {
+                            tipo_inmueble: { type: 'string', description: `Tipo de inmueble. Valores posibles: ${tiposDesc}` },
+                            precio_min: { type: 'number' },
+                            precio_max: { type: 'number' },
+                            m2_min: { type: 'number' },
+                            m2_max: { type: 'number' },
+                            zona: { type: 'string' },
+                        },
+                        required: [],
+                    },
+                },
+            },
+            {
+                type: 'function',
+                function: {
+                    name: 'actualizar_lead',
+                    description:
+                        'Actualiza el estado y/o prioridad del lead según el nivel de interés y calificación detectado en la conversación.',
+                    parameters: {
+                        type: 'object',
+                        properties: {
+                            estado: {
+                                type: 'string',
+                                enum: ['NUEVO', 'EN PROCESO', 'CALIFICADO', 'CERRADO', 'DESCARTADO', 'PERDIDO'],
+                            },
+                            prioridad: {
+                                type: 'string',
+                                enum: ['BAJA', 'MEDIA', 'ALTA', 'URGENTE'],
+                                description: 'BAJA=solo curiosidad, MEDIA=interés real sin urgencia, ALTA=presupuesto + plazo claros, URGENTE=quiere visitar o comprar ya',
+                            },
+                        },
+                        required: [],
+                    },
+                },
+            },
+            {
+                type: 'function',
+                function: {
+                    name: 'actualizar_perfil_inmobiliario',
+                    description:
+                        'Guarda o actualiza las preferencias inmobiliarias del cliente (tipo de propiedad, zona, presupuesto, recámaras, m², etc.) a medida que el cliente las menciona.',
+                    parameters: {
+                        type: 'object',
+                        properties: {
+                            tipo_inmueble: { type: 'string', description: `Tipo de inmueble. Valores posibles: ${tiposDesc}` },
+                            ciudad: { type: 'string' },
+                            zona: { type: 'string' },
+                            presupuesto_min: { type: 'number' },
+                            presupuesto_max: { type: 'number' },
+                            recamaras: { type: 'number' },
+                            banos: { type: 'number' },
+                            m2_requeridos: { type: 'number' },
+                        },
+                        required: [],
+                    },
+                },
+            },
+            {
+                type: 'function',
+                function: {
+                    name: 'crear_nota',
+                    description:
+                        'Crea una nota interna o registra una llamada/tarea en el historial del lead.',
+                    parameters: {
+                        type: 'object',
+                        properties: {
+                            descripcion: { type: 'string', description: 'Contenido de la nota' },
+                            tipo: {
+                                type: 'string',
+                                enum: ['NOTE', 'CALL', 'TASK', 'WHATSAPP', 'EMAIL'],
+                            },
+                        },
+                        required: ['descripcion'],
+                    },
+                },
+            },
+            {
+                type: 'function',
+                function: {
+                    name: 'agendar_cita',
+                    description:
+                        'Registra una cita o visita cuando el cliente muestra intención de ver una propiedad o reunirse con un asesor.',
+                    parameters: {
+                        type: 'object',
+                        properties: {
+                            descripcion: { type: 'string', description: 'Descripción de la cita o visita' },
+                            fecha_iso: { type: 'string', description: 'Fecha y hora en formato ISO 8601. Omitir si no se especificó.' },
+                        },
+                        required: ['descripcion'],
+                    },
+                },
+            },
+            {
+                type: 'function',
+                function: {
+                    name: 'actualizar_contexto',
+                    description:
+                        'Guarda un resumen acumulativo y actualizado de todo lo que conoces del cliente: su personalidad, situación de vida, motivaciones, preferencias no estructuradas, disponibilidad horaria, objeciones, etc. Llama esta herramienta al final de cada conversación para que en el siguiente contacto ya tengas contexto completo del cliente sin necesidad de volver a preguntar.',
+                    parameters: {
+                        type: 'object',
+                        properties: {
+                            resumen: {
+                                type: 'string',
+                                description: 'Resumen completo y actualizado del cliente. Incluye todo lo conocido: situación personal, motivaciones de compra, objeciones, disponibilidad, tono de comunicación, etc. Este texto reemplaza completamente el contexto anterior.',
+                            },
+                        },
+                        required: ['resumen'],
+                    },
+                },
+            },
+        ];
+    }
 
     // ── Main entry point ─────────────────────────────────────────────────────
     async chat(leadId: number, userMessage: string, esEntrante: boolean): Promise<{ respuesta: string }> {
@@ -146,11 +191,13 @@ export class AiService {
             },
         });
 
-        // 2. Load chat history
+        // 2. Load last 20 messages (newest first, then reverse for chronological order)
         const mensajes = await this.prisma.crmMensaje.findMany({
             where: { id_lead: leadId },
-            orderBy: { creado_en: 'asc' },
+            orderBy: { creado_en: 'desc' },
+            take: 20,
         });
+        mensajes.reverse();
 
         // 3. Build context summary
         const br = lead?.solicitudes?.[0]?.bienes_raices;
@@ -165,13 +212,17 @@ export class AiService {
             br?.m2_construidos_requeridos ? `M² requeridos: ${br.m2_construidos_requeridos}` : null,
         ].filter(Boolean).join(' | ') || 'Sin perfil registrado aún';
 
+        const contextoCliente = lead?.contexto_ia
+            ? `\n*CONTEXTO ACUMULADO DEL CLIENTE (escrito por ti en conversaciones anteriores):*\n${lead.contexto_ia}\n`
+            : '';
+
         const systemPrompt = `Eres Maya, asesora virtual inteligente de RENAV Real Estate Group. Tu objetivo principal es CALIFICAR al lead, construir su perfil inmobiliario y facilitar el trabajo del agente humano.
 
 *DATOS DEL LEAD:*
 - Nombre: ${lead?.contacto?.nombre || 'cliente'}
 - Estado CRM: ${lead?.estado || 'NUEVO'} | Prioridad: ${lead?.prioridad || 'MEDIA'}
 - Perfil registrado: ${perfil}
-
+${contextoCliente}
 *REGLAS DE HERRAMIENTAS (OBLIGATORIAS):*
 - Si el cliente menciona tipo de inmueble, zona, presupuesto, recámaras o m²: llama INMEDIATAMENTE *actualizar_perfil_inmobiliario* con todos los datos mencionados ANTES de responder. Convierte expresiones como "4 millones" → 4000000, "500 mil" → 500000.
 - Si detectas cambio en nivel de interés o intención de compra: llama *actualizar_lead* con el estado/prioridad correspondiente.
@@ -180,6 +231,7 @@ export class AiService {
 - Si el cliente menciona querer visitar o agendar reunión: llama *agendar_cita* INMEDIATAMENTE.
 - Después de cada conversación relevante: llama *crear_nota* con el resumen de datos clave para el agente humano.
 - Cuando tengas tipo + zona + presupuesto + al menos una señal de intención: llama *actualizar_lead* con estado=CALIFICADO.
+- Al final de CADA respuesta, llama *actualizar_contexto* con un resumen actualizado de todo lo que sabes del cliente (personalidad, situación, preferencias no estructuradas, disponibilidad, motivaciones). Reemplaza el contexto anterior con una versión mejorada y acumulativa.
 - NUNCA digas "voy a registrar" o "voy a guardar" — simplemente llama la herramienta y confirma al cliente.
 
 *REGLAS DE FORMATO:*
@@ -188,7 +240,7 @@ export class AiService {
 - Responde en español, tono profesional y amable.
 - Nunca inventes propiedades ni datos del cliente.`;
 
-        // 4. Build message history
+        // 4. Build message history (last 20, already ordered chronologically)
         const historial = mensajes.map((m) => ({
             role: m.es_entrante ? ('user' as const) : ('assistant' as const),
             content: m.texto,
@@ -216,7 +268,7 @@ export class AiService {
                     'HTTP-Referer': 'https://renav.mx',
                     'X-Title': 'RENAV CRM',
                 },
-                body: JSON.stringify({ model: MODEL, messages, tools: TOOLS, tool_choice: 'auto' }),
+                body: JSON.stringify({ model: MODEL, messages, tools: this.buildTools(), tool_choice: 'auto' }),
             });
 
             if (!response.ok) throw new Error(`OpenRouter error: ${response.status}`);
@@ -247,6 +299,9 @@ export class AiService {
                             break;
                         case 'agendar_cita':
                             result = await this.agendarCita(leadId, args);
+                            break;
+                        case 'actualizar_contexto':
+                            result = await this.actualizarContexto(leadId, args);
                             break;
                         default:
                             result = { error: 'Herramienta desconocida' };
@@ -362,9 +417,12 @@ export class AiService {
             }
         }
 
-        // Resolve tipo_inmueble ID
+        // Resolve tipo_inmueble ID desde el mapa cargado en BD
         const tipoKey = args.tipo_inmueble?.toLowerCase().trim();
-        const id_tipo_inmueble = tipoKey ? TIPO_INMUEBLE_MAP[tipoKey] ?? null : null;
+        const id_tipo_inmueble = tipoKey ? (this.tipoInmuebleMap[tipoKey] ?? null) : null;
+        if (tipoKey && !id_tipo_inmueble) {
+            console.warn(`[AiService] tipo_inmueble "${tipoKey}" no encontrado en catálogo`);
+        }
 
         // Upsert bienes_raices preferences
         const brData: any = {};
@@ -409,6 +467,15 @@ export class AiService {
             },
         });
         return { ok: true, cita: args.descripcion, fecha: args.fecha_iso || 'por confirmar' };
+    }
+
+    // ── Tool: actualizar contexto del cliente ─────────────────────────────────
+    private async actualizarContexto(leadId: number, args: { resumen: string }) {
+        await this.prisma.crmLead.update({
+            where: { id_lead: leadId },
+            data: { contexto_ia: args.resumen },
+        });
+        return { ok: true };
     }
 
     // ── Format inventory unit ─────────────────────────────────────────────────

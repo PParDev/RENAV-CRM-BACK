@@ -1,9 +1,34 @@
 
-import { Controller, Get, Post, Body, Patch, Param, Delete, Query, ParseIntPipe, DefaultValuePipe } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, Query, ParseIntPipe, DefaultValuePipe, HttpCode, HttpStatus } from '@nestjs/common';
 import { LeadsService } from './leads.service';
 import { CreateLeadDto } from './dto/create-lead.dto';
 import { UpdateLeadDto } from './dto/update-lead.dto';
+import { IsArray, IsNumber, IsString } from 'class-validator';
 import { ApiTags, ApiQuery } from '@nestjs/swagger';
+
+class BulkDeleteDto {
+    @IsArray()
+    @IsNumber({}, { each: true })
+    ids: number[];
+}
+
+class BulkStatusDto {
+    @IsArray()
+    @IsNumber({}, { each: true })
+    ids: number[];
+
+    @IsString()
+    estado: string;
+}
+
+class BulkAssignDto {
+    @IsArray()
+    @IsNumber({}, { each: true })
+    ids: number[];
+
+    @IsNumber()
+    id_usuario: number;
+}
 
 @ApiTags('leads')
 @Controller('leads')
@@ -13,6 +38,25 @@ export class LeadsController {
     @Post()
     create(@Body() createLeadDto: CreateLeadDto) {
         return this.leadsService.create(createLeadDto);
+    }
+
+    // Bulk: eliminar varios leads de una vez
+    @Post('bulk-delete')
+    @HttpCode(HttpStatus.OK)
+    bulkDelete(@Body() body: BulkDeleteDto) {
+        return this.leadsService.bulkDelete(body.ids);
+    }
+
+    // Bulk: cambiar estado de varios leads de una vez
+    @Patch('bulk-status')
+    bulkChangeStatus(@Body() body: BulkStatusDto) {
+        return this.leadsService.bulkChangeStatus(body.ids, body.estado);
+    }
+
+    // Bulk: asignar usuario masivamente
+    @Patch('bulk-assign')
+    bulkAssign(@Body() body: BulkAssignDto) {
+        return this.leadsService.bulkAssign(body.ids, body.id_usuario);
     }
 
     @Get()

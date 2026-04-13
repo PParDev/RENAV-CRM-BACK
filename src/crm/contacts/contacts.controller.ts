@@ -15,6 +15,11 @@ export class ContactsController {
         return this.contactsService.create(createContactDto);
     }
 
+    @Post('find-or-create')
+    findOrCreate(@Body() createContactDto: CreateContactDto) {
+        return this.contactsService.findOrCreate(createContactDto);
+    }
+
     @Get()
     @ApiQuery({ name: 'skip', required: false, type: Number })
     @ApiQuery({ name: 'take', required: false, type: Number })

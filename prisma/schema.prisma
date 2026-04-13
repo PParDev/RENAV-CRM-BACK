@@ -291,6 +291,7 @@ model CrmLead {
   score                 Int      @default(0)
   id_usuario_asignado   Int?
   notas_iniciales       String?
+  contexto_ia           String?  // Resumen acumulativo del cliente escrito por la IA
   creado_en             DateTime @default(now()) @db.Timestamptz
   actualizado_en        DateTime @default(now()) @updatedAt @db.Timestamptz
 

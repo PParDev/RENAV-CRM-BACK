@@ -11,13 +11,17 @@ export class LeadsService {
 
     // Crea un nuevo lead en la base de datos y asigna valores iniciales
     async create(createLeadDto: CreateLeadDto): Promise<CrmLead> {
+        // Auto-asignar al agente con menos leads activos si no se especificó uno
+        const id_usuario_asignado =
+            createLeadDto.id_usuario_asignado ?? (await this.getNextAgent());
+
         const lead = await this.prisma.crmLead.create({
             data: {
                 id_contacto: createLeadDto.id_contacto,
                 id_servicio_principal: createLeadDto.id_servicio_principal,
                 estado: createLeadDto.estado,
                 prioridad: createLeadDto.prioridad || 'MEDIA',
-                id_usuario_asignado: createLeadDto.id_usuario_asignado,
+                id_usuario_asignado,
                 notas_iniciales: createLeadDto.notas_iniciales,
             },
             include: {
@@ -28,6 +32,46 @@ export class LeadsService {
         });
         this.calcularScore(lead.id_lead).catch(() => {});
         return lead;
+    }
+
+    // Devuelve el id del agente activo con menos leads abiertos (least-loaded)
+    private async getNextAgent(): Promise<number | null> {
+        const agents = await this.prisma.crmUsuario.findMany({
+            where: { activo: true },
+            select: { id_usuario: true },
+        });
+        if (!agents.length) return null;
+
+        const ids = agents.map((a) => a.id_usuario);
+
+        // Contar leads activos (no cerrados/descartados/perdidos) por agente
+        const counts = await this.prisma.crmLead.groupBy({
+            by: ['id_usuario_asignado'],
+            where: {
+                id_usuario_asignado: { in: ids },
+                estado: { notIn: ['CERRADO', 'DESCARTADO', 'PERDIDO'] },
+            },
+            _count: { id_lead: true },
+        });
+
+        // Mapa agente → cantidad de leads activos (0 si no tiene ninguno)
+        const countMap = new Map<number, number>(ids.map((id) => [id, 0]));
+        for (const row of counts) {
+            if (row.id_usuario_asignado !== null) {
+                countMap.set(row.id_usuario_asignado, row._count.id_lead);
+            }
+        }
+
+        // El agente con menos leads activos
+        let minCount = Infinity;
+        let selected: number | null = null;
+        for (const [agentId, count] of countMap) {
+            if (count < minCount) {
+                minCount = count;
+                selected = agentId;
+            }
+        }
+        return selected;
     }
 
     // Obtiene una lista paginada de leads, con opción de filtrar por estado, usuario asignado o búsqueda
@@ -147,7 +191,9 @@ export class LeadsService {
                     servicio_principal: true,
                 },
             });
-            this.calcularScore(id).catch(() => {});
+            // Score sincronizado: calculamos y persistimos antes de devolver el lead
+            const newScore = await this.calcularScore(id);
+            lead.score = newScore;
             return lead;
         } catch (error) {
             if ((error as any).code === 'P2025') {
@@ -188,6 +234,32 @@ export class LeadsService {
         const final = this.computeScore(lead);
         await this.prisma.crmLead.update({ where: { id_lead: leadId }, data: { score: final } });
         return final;
+    }
+
+    // Elimina múltiples leads en una sola operación
+    async bulkDelete(ids: number[]): Promise<{ count: number }> {
+        const result = await this.prisma.crmLead.deleteMany({
+            where: { id_lead: { in: ids } },
+        });
+        return { count: result.count };
+    }
+
+    // Cambia el estado de múltiples leads en una sola operación
+    async bulkChangeStatus(ids: number[], estado: string): Promise<{ count: number }> {
+        const result = await this.prisma.crmLead.updateMany({
+            where: { id_lead: { in: ids } },
+            data: { estado },
+        });
+        return { count: result.count };
+    }
+
+    // Asigna masivamente un usuario a múltiples leads
+    async bulkAssign(ids: number[], id_usuario: number): Promise<{ count: number }> {
+        const result = await this.prisma.crmLead.updateMany({
+            where: { id_lead: { in: ids } },
+            data: { id_usuario_asignado: id_usuario },
+        });
+        return { count: result.count };
     }
 
     // Elimina un lead de la base de datos

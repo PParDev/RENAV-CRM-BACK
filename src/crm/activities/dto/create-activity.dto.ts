@@ -8,6 +8,7 @@ export enum ActivityType {
     TASK = 'TASK',
     WHATSAPP = 'WHATSAPP',
     EMAIL = 'EMAIL',
+    CITA = 'CITA',
 }
 
 export class CreateActivityDto {

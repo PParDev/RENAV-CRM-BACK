@@ -86,4 +86,21 @@ export class ContactsService {
             where: { correo: email },
         });
     }
+
+    // Busca contacto existente por correo o teléfono; si no existe, lo crea
+    async findOrCreate(dto: CreateContactDto): Promise<{ contact: CrmContacto; isNew: boolean }> {
+        let existing: CrmContacto | null = null;
+
+        if (dto.correo) {
+            existing = await this.prisma.crmContacto.findFirst({ where: { correo: dto.correo } });
+        }
+        if (!existing && dto.telefono) {
+            existing = await this.prisma.crmContacto.findFirst({ where: { telefono: dto.telefono } });
+        }
+
+        if (existing) return { contact: existing, isNew: false };
+
+        const contact = await this.prisma.crmContacto.create({ data: dto });
+        return { contact, isNew: true };
+    }
 }
