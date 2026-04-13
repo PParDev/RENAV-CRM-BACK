@@ -51,6 +51,7 @@ export class DevelopmentsService {
         if (search) {
             where.nombre = { contains: search, mode: 'insensitive' };
         }
+        where.activo = true;
 
         return this.prisma.invDesarrollo.findMany({
             skip,
@@ -83,12 +84,13 @@ export class DevelopmentsService {
                 zona: true,
                 tipologias: true,
                 unidades: {
+                    where: { activo: true },
                     select: { id_unidad: true, codigo_unidad: true, precios_lista: true, m2_construccion: true, id_estado_unidad: true } // Simple list of units
                 }
             },
         });
 
-        if (!development) {
+        if (!development || !development.activo) {
             throw new NotFoundException(`Development with ID ${id} not found`);
         }
 
@@ -115,8 +117,9 @@ export class DevelopmentsService {
     // Elimina un desarrollo del registro
     async remove(id: number): Promise<InvDesarrollo> {
         try {
-            return await this.prisma.invDesarrollo.delete({
+            return await this.prisma.invDesarrollo.update({
                 where: { id_desarrollo: id },
+                data: { activo: false }
             });
         } catch (error) {
             // @ts-ignore

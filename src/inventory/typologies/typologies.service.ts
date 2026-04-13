@@ -35,6 +35,7 @@ export class TypologiesService {
         if (search) {
             where.nombre = { contains: search, mode: 'insensitive' };
         }
+        where.activo = true;
 
         return this.prisma.invTipologia.findMany({
             skip,
@@ -58,7 +59,7 @@ export class TypologiesService {
             }
         });
 
-        if (!tipologia) {
+        if (!tipologia || !tipologia.activo) {
             throw new NotFoundException(`Typology with ID ${id} not found`);
         }
 
@@ -92,8 +93,9 @@ export class TypologiesService {
 
     async remove(id: number): Promise<InvTipologia> {
         try {
-            return await this.prisma.invTipologia.delete({
+            return await this.prisma.invTipologia.update({
                 where: { id_tipologia: id },
+                data: { activo: false }
             });
         } catch (error) {
             // @ts-ignore

@@ -18,6 +18,7 @@ export class CitiesService {
     // Obtiene todas las ciudades registradas alfabéticamente
     async findAll() {
         return this.prisma.invCiudad.findMany({
+            where: { activo: true },
             orderBy: { nombre: 'asc' },
         });
     }
@@ -27,7 +28,7 @@ export class CitiesService {
         const city = await this.prisma.invCiudad.findUnique({
             where: { id_inv_ciudad: id },
         });
-        if (!city) throw new NotFoundException('City not found');
+        if (!city || !city.activo) throw new NotFoundException('City not found');
         return city;
     }
 
@@ -47,8 +48,9 @@ export class CitiesService {
     // Elimina una ciudad del catálogo
     async remove(id: number) {
         try {
-            return await this.prisma.invCiudad.delete({
+            return await this.prisma.invCiudad.update({
                 where: { id_inv_ciudad: id },
+                data: { activo: false }
             });
         } catch (e: any) {
             if (e.code === 'P2025') throw new NotFoundException('City not found');

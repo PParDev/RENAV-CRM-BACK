@@ -13,6 +13,7 @@ export class PipelinesService {
 
     async findAll(): Promise<CrmEtapaPipeline[]> {
         return this.prisma.crmEtapaPipeline.findMany({
+            where: { activo: true },
             orderBy: { orden: 'asc' },
             include: { servicio: true }
         });
@@ -23,7 +24,7 @@ export class PipelinesService {
             where: { id_etapa: id },
             include: { servicio: true }
         });
-        if (!etapa) throw new NotFoundException('Pipeline stage not found');
+        if (!etapa || !etapa.activo) throw new NotFoundException('Pipeline stage not found');
         return etapa;
     }
 
@@ -40,8 +41,9 @@ export class PipelinesService {
 
     async remove(id: number): Promise<CrmEtapaPipeline> {
         try {
-            return await this.prisma.crmEtapaPipeline.delete({
+            return await this.prisma.crmEtapaPipeline.update({
                 where: { id_etapa: id },
+                data: { activo: false }
             });
         } catch (error) {
             throw new NotFoundException('Pipeline stage not found');

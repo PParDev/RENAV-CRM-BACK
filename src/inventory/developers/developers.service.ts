@@ -27,9 +27,10 @@ export class DevelopersService {
 
     // Lista a todos los desarrolladores, permitiendo buscar por su nombre
     async findAll(search?: string) {
-        const where = search ? {
+        const where: any = search ? {
             nombre: { contains: search, mode: 'insensitive' as const },
-        } : undefined;
+        } : {};
+        where.activo = true;
 
         return this.prisma.invDesarrollador.findMany({
             where,
@@ -45,7 +46,7 @@ export class DevelopersService {
             include: { zonas: { include: { zona: true } } },
         });
 
-        if (!developer) {
+        if (!developer || !developer.activo) {
             throw new NotFoundException(`Developer with ID ${id} not found`);
         }
 
@@ -81,8 +82,9 @@ export class DevelopersService {
     // Elimina un desarrollador de la base de datos
     async remove(id: number) {
         try {
-            return await this.prisma.invDesarrollador.delete({
+            return await this.prisma.invDesarrollador.update({
                 where: { id_desarrollador: id },
+                data: { activo: false }
             });
         } catch (error) {
             // @ts-ignore

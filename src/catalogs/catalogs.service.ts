@@ -9,6 +9,7 @@ export class CatalogsService {
     // ---- Servicios ----
     async getServicios() {
         return this.prisma.catServicios.findMany({
+            where: { activo: true },
             orderBy: { nombre: 'asc' },
         });
     }
@@ -22,7 +23,7 @@ export class CatalogsService {
     }
 
     async deleteServicio(id: number) {
-        return this.prisma.catServicios.delete({ where: { id_servicio: id } });
+        return this.prisma.catServicios.update({ where: { id_servicio: id }, data: { activo: false } });
     }
 
     // ---- MetodosPago ----

@@ -56,6 +56,7 @@ export class ApartadosService {
         if (id_unidad) where.id_unidad = id_unidad;
         if (id_lead) where.id_lead = id_lead;
         if (status !== undefined) where.status = status;
+        where.activo = true;
 
         return this.prisma.invApartado.findMany({
             skip,
@@ -86,7 +87,7 @@ export class ApartadosService {
             }
         });
 
-        if (!apartado) {
+        if (!apartado || !apartado.activo) {
             throw new NotFoundException(`Apartado with ID ${id} not found`);
         }
 
@@ -140,8 +141,9 @@ export class ApartadosService {
 
     async remove(id: number): Promise<InvApartado> {
         try {
-            return await this.prisma.invApartado.delete({
+            return await this.prisma.invApartado.update({
                 where: { id_apartado: id },
+                data: { activo: false }
             });
         } catch (error) {
             // @ts-ignore

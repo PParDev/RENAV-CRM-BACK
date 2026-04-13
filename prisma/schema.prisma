@@ -253,6 +253,7 @@ model CrmContacto {
   telefono    String?
   origen      String?
   ciudad      String?
+  activo      Boolean  @default(true)
   creado_en   DateTime @default(now()) @db.Timestamptz
 
   leads CrmLead[]
@@ -292,6 +293,7 @@ model CrmLead {
   id_usuario_asignado   Int?
   notas_iniciales       String?
   contexto_ia           String?  // Resumen acumulativo del cliente escrito por la IA
+  activo                Boolean  @default(true)
   creado_en             DateTime @default(now()) @db.Timestamptz
   actualizado_en        DateTime @default(now()) @updatedAt @db.Timestamptz
 
@@ -370,6 +372,7 @@ model CrmActividad {
   descripcion     String?
   programada_para DateTime? @db.Timestamptz
   realizada_en    DateTime? @db.Timestamptz
+  activo          Boolean   @default(true)
   creada_por      Int?
   creada_en       DateTime  @default(now()) @db.Timestamptz
 
@@ -392,6 +395,7 @@ model CrmMensaje {
   media_url          String?
   whatsapp_msg_id    String?  @unique
   estatus_entrega    String   @default("ENVIADO") // ENTREGADO, LEIDO, FALLIDO
+  activo             Boolean  @default(true)
   creado_en          DateTime @default(now()) @db.Timestamptz
 
   lead               CrmLead     @relation(fields: [id_lead], references: [id_lead], onDelete: Cascade)
@@ -413,6 +417,7 @@ model CrmSolicitudServicio {
   ciudad          String?
   zona            String?
   ubicacion_texto String?
+  activo          Boolean  @default(true)
   creado_en       DateTime @default(now()) @db.Timestamptz
 
   lead        CrmLead        @relation(fields: [id_lead], references: [id_lead], onDelete: Cascade)
@@ -521,6 +526,7 @@ model InvCiudad {
   nombre        String
   estado        String?
   codigo        String? @unique
+  activo        Boolean @default(true)
 
   desarrollos InvDesarrollo[]
 
@@ -535,6 +541,7 @@ model InvDesarrollador {
   ubicacion        String?
   email            String?
   telefono         String?
+  activo           Boolean @default(true)
 
   desarrollos InvDesarrollo[]
   zonas       InvDesarrolladorZona[]
@@ -572,6 +579,7 @@ model InvDesarrollo {
   metodo_contado        String?
   metodo_hipotecario    String?
   metodo_financiamiento String?
+  activo                Boolean  @default(true)
   creado_en             DateTime @default(now()) @db.Timestamptz
   actualizado_en        DateTime @default(now()) @updatedAt @db.Timestamptz
 
@@ -599,6 +607,7 @@ model InvTipologia {
   id_desarrollo  Int
   nombre         String
   total_unidades Int?
+  activo         Boolean @default(true)
 
   desarrollo InvDesarrollo @relation(fields: [id_desarrollo], references: [id_desarrollo], onDelete: Cascade)
   unidades   InvUnidad[]
@@ -629,6 +638,7 @@ model InvUnidad {
   tipo_proyecto         String?
   nivel_piso            String?
   porcentaje_comision   Decimal?  @db.Decimal(8, 4)
+  activo                Boolean   @default(true)
 
   desarrollo     InvDesarrollo      @relation(fields: [id_desarrollo], references: [id_desarrollo], onDelete: Cascade)
   tipologia      InvTipologia?      @relation(fields: [id_tipologia], references: [id_tipologia])
@@ -674,6 +684,7 @@ model InvApartado {
   fecha_apartado DateTime? @db.Date
   vence_en       DateTime? @db.Date
   status         Boolean   @default(true)
+  activo         Boolean   @default(true)
 
   unidad InvUnidad @relation(fields: [id_unidad], references: [id_unidad], onDelete: Cascade)
   lead   CrmLead?  @relation(fields: [id_lead], references: [id_lead])
@@ -693,6 +704,7 @@ model InvVenta {
   fecha_cierre   DateTime? @db.Date
   porc_comision  Decimal?  @db.Decimal(8, 4)
   monto_comision Decimal?  @db.Decimal(14, 2)
+  activo         Boolean   @default(true)
 
   unidad InvUnidad @relation(fields: [id_unidad], references: [id_unidad])
   lead   CrmLead?  @relation(fields: [id_lead], references: [id_lead])

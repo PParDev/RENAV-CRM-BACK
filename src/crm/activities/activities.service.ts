@@ -23,7 +23,7 @@ export class ActivitiesService {
     // Obtiene todo el historial de actividades de un lead en específico
     async findAllByLead(leadId: number): Promise<CrmActividad[]> {
         return this.prisma.crmActividad.findMany({
-            where: { id_lead: leadId },
+            where: { id_lead: leadId, activo: true },
             orderBy: { creada_en: 'desc' },
             include: { usuario: true },
         });
@@ -31,7 +31,8 @@ export class ActivitiesService {
 
     // Obtiene todas las actividades, con opción de filtrar por un lead
     async findAll(leadId?: number): Promise<CrmActividad[]> {
-        const where = leadId ? { id_lead: leadId } : undefined;
+        const where: any = leadId ? { id_lead: leadId } : {};
+        where.activo = true;
         return this.prisma.crmActividad.findMany({
             where,
             orderBy: { creada_en: 'desc' },
@@ -45,7 +46,7 @@ export class ActivitiesService {
             where: { id_actividad: id },
         });
 
-        if (!activity) {
+        if (!activity || !activity.activo) {
             throw new NotFoundException(`Activity with ID ${id} not found`);
         }
 
@@ -71,8 +72,9 @@ export class ActivitiesService {
     // Elimina una actividad de la base de datos
     async remove(id: number): Promise<CrmActividad> {
         try {
-            return await this.prisma.crmActividad.delete({
+            return await this.prisma.crmActividad.update({
                 where: { id_actividad: id },
+                data: { activo: false }
             });
         } catch (error) {
             // @ts-ignore

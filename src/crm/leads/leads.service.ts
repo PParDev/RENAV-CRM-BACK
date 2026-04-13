@@ -94,6 +94,7 @@ export class LeadsService {
                 ],
             };
         }
+        where.activo = true;
 
         return this.prisma.crmLead.findMany({
             skip,
@@ -140,10 +141,10 @@ export class LeadsService {
                     historial_etapas: { orderBy: { cambiado_en: 'desc' }, include: { etapa: true, usuario: true } },
                 },
             }),
-            this.prisma.crmMensaje.count({ where: { id_lead: id } }),
+            this.prisma.crmMensaje.count({ where: { id_lead: id, activo: true } }),
         ]);
 
-        if (!lead) throw new NotFoundException(`Lead with ID ${id} not found`);
+        if (!lead || !lead.activo) throw new NotFoundException(`Lead with ID ${id} not found`);
 
         // Recalculate score from already-fetched data and persist if changed
         const newScore = this.computeScore(lead);
@@ -159,7 +160,7 @@ export class LeadsService {
 
     // Mensajes paginados por cursor: devuelve 20 mensajes anteriores a `before`
     async findMessages(id: number, before?: number): Promise<any> {
-        const where: any = { id_lead: id };
+        const where: any = { id_lead: id, activo: true };
         if (before) where.id_mensaje = { lt: before };
 
         const mensajes = await this.prisma.crmMensaje.findMany({
@@ -168,7 +169,7 @@ export class LeadsService {
             take: 20,
         });
 
-        const total = await this.prisma.crmMensaje.count({ where: { id_lead: id } });
+        const total = await this.prisma.crmMensaje.count({ where: { id_lead: id, activo: true } });
         return { mensajes: mensajes.reverse(), total };
     }
 
@@ -238,8 +239,9 @@ export class LeadsService {
 
     // Elimina múltiples leads en una sola operación
     async bulkDelete(ids: number[]): Promise<{ count: number }> {
-        const result = await this.prisma.crmLead.deleteMany({
+        const result = await this.prisma.crmLead.updateMany({
             where: { id_lead: { in: ids } },
+            data: { activo: false },
         });
         return { count: result.count };
     }
@@ -265,8 +267,9 @@ export class LeadsService {
     // Elimina un lead de la base de datos
     async remove(id: number): Promise<CrmLead> {
         try {
-            return await this.prisma.crmLead.delete({
+            return await this.prisma.crmLead.update({
                 where: { id_lead: id },
+                data: { activo: false },
             });
         } catch (error) {
             if ((error as any).code === 'P2025') {

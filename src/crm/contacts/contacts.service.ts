@@ -22,13 +22,14 @@ export class ContactsService {
         take?: number,
         search?: string
     ): Promise<CrmContacto[]> {
-        const where = search ? {
+        const where: any = search ? {
             OR: [
                 { nombre: { contains: search, mode: 'insensitive' as const } },
                 { correo: { contains: search, mode: 'insensitive' as const } },
                 { telefono: { contains: search, mode: 'insensitive' as const } },
             ],
-        } : undefined;
+        } : {};
+        where.activo = true;
 
         return this.prisma.crmContacto.findMany({
             skip,
@@ -44,7 +45,7 @@ export class ContactsService {
             where: { id_contacto: id },
         });
 
-        if (!contact) {
+        if (!contact || !contact.activo) {
             throw new NotFoundException(`Contact with ID ${id} not found`);
         }
 
@@ -69,8 +70,9 @@ export class ContactsService {
     // Elimina un contacto de la base de datos
     async remove(id: number): Promise<CrmContacto> {
         try {
-            return await this.prisma.crmContacto.delete({
+            return await this.prisma.crmContacto.update({
                 where: { id_contacto: id },
+                data: { activo: false }
             });
         } catch (error) {
             if ((error as any).code === 'P2025') {
@@ -83,7 +85,7 @@ export class ContactsService {
     // Busca un contacto por su correo electrónico
     async findByEmail(email: string): Promise<CrmContacto | null> {
         return this.prisma.crmContacto.findFirst({
-            where: { correo: email },
+            where: { correo: email, activo: true },
         });
     }
 
@@ -92,10 +94,10 @@ export class ContactsService {
         let existing: CrmContacto | null = null;
 
         if (dto.correo) {
-            existing = await this.prisma.crmContacto.findFirst({ where: { correo: dto.correo } });
+            existing = await this.prisma.crmContacto.findFirst({ where: { correo: dto.correo, activo: true } });
         }
         if (!existing && dto.telefono) {
-            existing = await this.prisma.crmContacto.findFirst({ where: { telefono: dto.telefono } });
+            existing = await this.prisma.crmContacto.findFirst({ where: { telefono: dto.telefono, activo: true } });
         }
 
         if (existing) return { contact: existing, isNew: false };

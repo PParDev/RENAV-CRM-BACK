@@ -52,6 +52,7 @@ export class UnitsService {
         const where: any = {};
         if (desarrolloId) where.id_desarrollo = desarrolloId;
         if (codigo) where.codigo_unidad = { contains: codigo, mode: 'insensitive' };
+        where.activo = true;
 
         return this.prisma.invUnidad.findMany({
             skip,
@@ -84,7 +85,7 @@ export class UnitsService {
             },
         });
 
-        if (!unit) {
+        if (!unit || !unit.activo) {
             throw new NotFoundException(`Unit with ID ${id} not found`);
         }
 
@@ -111,8 +112,9 @@ export class UnitsService {
     // Elimina una unidad del sistema
     async remove(id: number): Promise<InvUnidad> {
         try {
-            return await this.prisma.invUnidad.delete({
+            return await this.prisma.invUnidad.update({
                 where: { id_unidad: id },
+                data: { activo: false },
             });
         } catch (error) {
             // @ts-ignore

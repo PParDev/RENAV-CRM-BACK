@@ -49,7 +49,7 @@ export class UsersService {
     // Obtiene todos los usuarios, con opción a filtrar por rol
     async findAll(role?: Role): Promise<UserWithoutPassword[]> {
         const users = await this.prisma.crmUsuario.findMany({
-            where: role ? { rol: role } : undefined,
+            where: role ? { rol: role, activo: true } : { activo: true },
         });
         return users.map((user) => this.excludePassword(user));
     }
@@ -60,7 +60,7 @@ export class UsersService {
             where: { id_usuario: +id },
         });
 
-        if (!user) {
+        if (!user || (!user.activo)) {
             throw new NotFoundException(`User with ID ${id} not found`);
         }
 
@@ -71,7 +71,7 @@ export class UsersService {
     async findByEmail(email: string): Promise<CrmUsuario | null> {
         return this.prisma.crmUsuario.findUnique({
             where: { email },
-        });
+        }).then(user => user?.activo ? user : null);
     }
 
     // Actualiza la información de un usuario existente
@@ -109,8 +109,9 @@ export class UsersService {
     // Elimina un usuario de la base de datos
     async remove(id: string): Promise<UserWithoutPassword> {
         try {
-            const user = await this.prisma.crmUsuario.delete({
+            const user = await this.prisma.crmUsuario.update({
                 where: { id_usuario: +id },
+                data: { activo: false }
             });
             return this.excludePassword(user);
         } catch (error) {
