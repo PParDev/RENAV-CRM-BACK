@@ -8,10 +8,12 @@ import { UploadModule } from './upload/upload.module';
 import { AiModule } from './ai/ai.module';
 
 import { ConfigModule } from '@nestjs/config';
+import { ScheduleModule } from '@nestjs/schedule';
 
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
+    ScheduleModule.forRoot(),
     DatabaseModule,
     AuthModule,
     CatalogsModule,

@@ -70,6 +70,27 @@ export class DevelopmentsService {
         });
     }
 
+    // Lista los desarrollos en la papelera (con días restantes)
+    async findDeleted() {
+        const items = await this.prisma.invDesarrollo.findMany({
+            where: { activo: false, deletedAt: { not: null } },
+            include: {
+                desarrollador: true,
+                zona: true,
+                unidades: { where: { activo: false, deletedAt: { not: null } }, select: { id_unidad: true } },
+            },
+            orderBy: { deletedAt: 'desc' },
+        });
+
+        return items.map(item => {
+            const daysLeft = item.deletedAt
+                ? Math.max(0, 7 - Math.floor((Date.now() - new Date(item.deletedAt).getTime()) / (1000 * 60 * 60 * 24)))
+                : 0;
+            return { ...item, daysLeft, totalUnidades: item.unidades.length };
+        });
+    }
+
+
     // Obtiene todo el detalle de un desarrollo, incluyendo sus tipologías y unidades
     async findOne(id: number): Promise<InvDesarrollo> {
         const development = await this.prisma.invDesarrollo.findUnique({
@@ -114,12 +135,41 @@ export class DevelopmentsService {
         }
     }
 
-    // Elimina un desarrollo del registro
+    // Elimina un desarrollo del registro (soft delete & cascade)
     async remove(id: number): Promise<InvDesarrollo> {
         try {
+            // First, update units
+            await this.prisma.invUnidad.updateMany({
+                where: { id_desarrollo: id, activo: true },
+                data: { activo: false, deletedAt: new Date() }
+            });
+
+            // Then update development
             return await this.prisma.invDesarrollo.update({
                 where: { id_desarrollo: id },
-                data: { activo: false }
+                data: { activo: false, deletedAt: new Date() }
+            });
+        } catch (error) {
+            // @ts-ignore
+            if (error.code === 'P2025') {
+                throw new NotFoundException(`Development with ID ${id} not found`);
+            }
+            throw error;
+        }
+    }
+
+    // Restaura un desarrollo y sus unidades que fueron enviadas a la papelera
+    async restore(id: number): Promise<InvDesarrollo> {
+        try {
+            // Restore units that were logically deleted (you could also use another flag if you only want to restore those deleted exactly when the dev was deleted)
+            await this.prisma.invUnidad.updateMany({
+                where: { id_desarrollo: id, activo: false, deletedAt: { not: null } },
+                data: { activo: true, deletedAt: null }
+            });
+
+            return await this.prisma.invDesarrollo.update({
+                where: { id_desarrollo: id },
+                data: { activo: true, deletedAt: null }
             });
         } catch (error) {
             // @ts-ignore

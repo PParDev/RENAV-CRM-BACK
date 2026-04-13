@@ -22,18 +22,32 @@ export class UnitsController {
         return this.unitsService.createBulk(units);
     }
 
+    @Post('bulk-delete')
+    bulkRemove(@Body('ids') ids: number[]) {
+        if (!ids || !ids.length) return { count: 0 };
+        return this.unitsService.bulkRemove(ids);
+    }
+
+    @Post('bulk-restore')
+    bulkRestore(@Body('ids') ids: number[]) {
+        if (!ids || !ids.length) return { count: 0 };
+        return this.unitsService.bulkRestore(ids);
+    }
+
     @Get()
     @ApiQuery({ name: 'skip', required: false, type: Number })
     @ApiQuery({ name: 'take', required: false, type: Number })
     @ApiQuery({ name: 'desarrolloId', required: false, type: Number })
     @ApiQuery({ name: 'codigo', required: false, type: String })
+    @ApiQuery({ name: 'activo', required: false, type: String })
     findAll(
         @Query('skip', new DefaultValuePipe(0), ParseIntPipe) skip?: number,
         @Query('take', new DefaultValuePipe(10), ParseIntPipe) take?: number,
         @Query('desarrolloId') desarrolloId?: number,
         @Query('codigo') codigo?: string,
+        @Query('activo') activo?: string,
     ) {
-        return this.unitsService.findAll(skip, take, desarrolloId ? +desarrolloId : undefined, codigo);
+        return this.unitsService.findAll(skip, take, desarrolloId ? +desarrolloId : undefined, codigo, activo);
     }
 
     @Get(':id')

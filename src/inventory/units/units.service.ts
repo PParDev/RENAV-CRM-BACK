@@ -47,12 +47,20 @@ export class UnitsService {
         skip?: number,
         take?: number,
         desarrolloId?: number,
-        codigo?: string
+        codigo?: string,
+        activoStatus?: string
     ): Promise<InvUnidad[]> {
         const where: any = {};
         if (desarrolloId) where.id_desarrollo = desarrolloId;
         if (codigo) where.codigo_unidad = { contains: codigo, mode: 'insensitive' };
-        where.activo = true;
+        
+        if (activoStatus === 'all') {
+            // No filtramos por activo, traemos todo
+        } else if (activoStatus === 'false') {
+            where.activo = false;
+        } else {
+            where.activo = true;
+        }
 
         return this.prisma.invUnidad.findMany({
             skip,
@@ -123,5 +131,21 @@ export class UnitsService {
             }
             throw error;
         }
+    }
+
+    // Eliminación lógica masiva
+    async bulkRemove(ids: number[]) {
+        return this.prisma.invUnidad.updateMany({
+            where: { id_unidad: { in: ids } },
+            data: { activo: false }
+        });
+    }
+
+    // Restauración lógica masiva
+    async bulkRestore(ids: number[]) {
+        return this.prisma.invUnidad.updateMany({
+            where: { id_unidad: { in: ids } },
+            data: { activo: true }
+        });
     }
 }

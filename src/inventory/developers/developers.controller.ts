@@ -21,14 +21,27 @@ export class DevelopersController {
         return this.developersService.findAll(search);
     }
 
+    @Get('trash')
+    findDeleted() {
+        return this.developersService.findDeleted();
+    }
+
     @Get(':id')
-    findOne(@Param('id', ParseIntPipe) id: number) {
-        return this.developersService.findOne(id);
+    findOne(@Param('id') id: string) {
+        if (id === 'trash') return this.developersService.findDeleted();
+        const numId = parseInt(id, 10);
+        if (isNaN(numId)) throw new Error(`Invalid id: ${id}`);
+        return this.developersService.findOne(numId);
     }
 
     @Patch(':id')
     update(@Param('id', ParseIntPipe) id: number, @Body() updateDeveloperDto: UpdateDeveloperDto) {
         return this.developersService.update(id, updateDeveloperDto);
+    }
+
+    @Patch(':id/restore')
+    restore(@Param('id', ParseIntPipe) id: number) {
+        return this.developersService.restore(id);
     }
 
     @Delete(':id')

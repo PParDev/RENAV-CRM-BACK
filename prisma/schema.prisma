@@ -542,6 +542,7 @@ model InvDesarrollador {
   email            String?
   telefono         String?
   activo           Boolean @default(true)
+  deletedAt        DateTime? @db.Timestamptz
 
   desarrollos InvDesarrollo[]
   zonas       InvDesarrolladorZona[]
@@ -582,6 +583,7 @@ model InvDesarrollo {
   activo                Boolean  @default(true)
   creado_en             DateTime @default(now()) @db.Timestamptz
   actualizado_en        DateTime @default(now()) @updatedAt @db.Timestamptz
+  deletedAt             DateTime? @db.Timestamptz
 
   inv_ciudad          InvCiudad?                      @relation(fields: [ciudad], references: [id_inv_ciudad])
   desarrollador       InvDesarrollador?               @relation(fields: [id_desarrollador], references: [id_desarrollador])
@@ -639,6 +641,7 @@ model InvUnidad {
   nivel_piso            String?
   porcentaje_comision   Decimal?  @db.Decimal(8, 4)
   activo                Boolean   @default(true)
+  deletedAt             DateTime? @db.Timestamptz
 
   desarrollo     InvDesarrollo      @relation(fields: [id_desarrollo], references: [id_desarrollo], onDelete: Cascade)
   tipologia      InvTipologia?      @relation(fields: [id_tipologia], references: [id_tipologia])

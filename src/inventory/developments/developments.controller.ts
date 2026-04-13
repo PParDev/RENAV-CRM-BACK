@@ -37,14 +37,27 @@ export class DevelopmentsController {
         return this.developmentsService.findAll(skip, take, ciudad ? +ciudad : undefined, desarrollador ? +desarrollador : undefined, search);
     }
 
+    @Get('trash')
+    findDeleted() {
+        return this.developmentsService.findDeleted();
+    }
+
     @Get(':id')
-    findOne(@Param('id', ParseIntPipe) id: number) {
-        return this.developmentsService.findOne(id);
+    findOne(@Param('id') id: string) {
+        if (id === 'trash') return this.developmentsService.findDeleted();
+        const numId = parseInt(id, 10);
+        if (isNaN(numId)) throw new Error(`Invalid id: ${id}`);
+        return this.developmentsService.findOne(numId);
     }
 
     @Patch(':id')
     update(@Param('id', ParseIntPipe) id: number, @Body() updateDevelopmentDto: UpdateDevelopmentDto) {
         return this.developmentsService.update(id, updateDevelopmentDto);
+    }
+
+    @Patch(':id/restore')
+    restore(@Param('id', ParseIntPipe) id: number) {
+        return this.developmentsService.restore(id);
     }
 
     @Delete(':id')
