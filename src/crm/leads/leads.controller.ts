@@ -80,6 +80,11 @@ export class LeadsController {
         return this.leadsService.findOne(id);
     }
 
+    @Get(':id/propiedades')
+    findMatchingProperties(@Param('id', ParseIntPipe) id: number) {
+        return this.leadsService.findMatchingProperties(id);
+    }
+
     @Get(':id/messages')
     findMessages(
         @Param('id', ParseIntPipe) id: number,

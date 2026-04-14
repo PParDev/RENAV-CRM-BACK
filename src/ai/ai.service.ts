@@ -1,6 +1,7 @@
 import { Injectable, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../database/prisma.service';
+import { EventsService } from '../events/events.service';
 
 const OPENROUTER_URL = 'https://openrouter.ai/api/v1/chat/completions';
 const MODEL = 'openai/gpt-4o-mini';
@@ -19,6 +20,7 @@ export class AiService implements OnModuleInit {
     constructor(
         private readonly prisma: PrismaService,
         private readonly config: ConfigService,
+        private readonly eventsService: EventsService,
     ) {}
 
     async onModuleInit() {
@@ -158,16 +160,92 @@ export class AiService implements OnModuleInit {
                 function: {
                     name: 'actualizar_contexto',
                     description:
-                        'Guarda un resumen acumulativo y actualizado de todo lo que conoces del cliente: su personalidad, situación de vida, motivaciones, preferencias no estructuradas, disponibilidad horaria, objeciones, etc. Llama esta herramienta al final de cada conversación para que en el siguiente contacto ya tengas contexto completo del cliente sin necesidad de volver a preguntar.',
+                        'Guarda un resumen acumulativo y actualizado de todo lo que conoces del cliente. Llama esta herramienta al final de CADA respuesta para mantener tu memoria entre conversaciones.',
                     parameters: {
                         type: 'object',
                         properties: {
                             resumen: {
                                 type: 'string',
-                                description: 'Resumen completo y actualizado del cliente. Incluye todo lo conocido: situación personal, motivaciones de compra, objeciones, disponibilidad, tono de comunicación, etc. Este texto reemplaza completamente el contexto anterior.',
+                                description: 'Resumen completo y actualizado. Incluye: situación personal, motivaciones de compra, objeciones, disponibilidad, tono de comunicación, preferencias no estructuradas, señales de intención. Este texto REEMPLAZA el contexto anterior — debe ser acumulativo y mejorado.',
                             },
                         },
                         required: ['resumen'],
+                    },
+                },
+            },
+            {
+                type: 'function',
+                function: {
+                    name: 'solicitar_agente_humano',
+                    description:
+                        'Marca el lead como prioritario y genera una alerta para que un agente humano tome el control. Úsala cuando: el cliente quiera negociar precio, hacer una oferta formal, visitar una propiedad específica, tiene una urgencia real, o cuando la conversación supera tu capacidad como IA.',
+                    parameters: {
+                        type: 'object',
+                        properties: {
+                            motivo: {
+                                type: 'string',
+                                description: 'Razón por la que se requiere agente humano (ej: "Cliente listo para visitar unidad A-302 en Desarrollo X, precio negociable")',
+                            },
+                            urgente: {
+                                type: 'boolean',
+                                description: 'true si el cliente necesita atención en menos de 24h (quiere visitar hoy, tiene oferta activa, etc.)',
+                            },
+                        },
+                        required: ['motivo'],
+                    },
+                },
+            },
+            {
+                type: 'function',
+                function: {
+                    name: 'clasificar_cliente',
+                    description:
+                        'Clasifica la temperatura/nivel de interés del cliente basándote en las señales observadas durante la conversación. Llama cuando detectes cambio significativo en el nivel de engagement.',
+                    parameters: {
+                        type: 'object',
+                        properties: {
+                            temperatura: {
+                                type: 'string',
+                                enum: ['FRIO', 'TIBIO', 'CALIENTE', 'MUY_CALIENTE'],
+                                description: 'FRIO=primer contacto sin datos, TIBIO=interés pero sin urgencia, CALIENTE=perfil sólido con intención, MUY_CALIENTE=listo para visita/oferta',
+                            },
+                            senales: {
+                                type: 'string',
+                                description: 'Señales observadas que justifican la clasificación (ej: "Tiene presupuesto definido, zona clara, preguntó por disponibilidad")',
+                            },
+                            accion_sugerida: {
+                                type: 'string',
+                                description: 'Acción recomendada para el agente humano (ej: "Contactar en 24h para agendar visita", "Enviar brochure del desarrollo X")',
+                            },
+                        },
+                        required: ['temperatura', 'senales'],
+                    },
+                },
+            },
+            {
+                type: 'function',
+                function: {
+                    name: 'registrar_objecion',
+                    description:
+                        'Registra una objeción, duda o barrera expresada por el cliente. Útil para que el agente humano sepa qué resistencias abordar.',
+                    parameters: {
+                        type: 'object',
+                        properties: {
+                            tipo_objecion: {
+                                type: 'string',
+                                enum: ['PRECIO', 'UBICACION', 'TIEMPO', 'FINANCIAMIENTO', 'DESCONFIANZA', 'INDECISION', 'COMPETENCIA', 'OTRO'],
+                                description: 'Categoría de la objeción',
+                            },
+                            descripcion: {
+                                type: 'string',
+                                description: 'Descripción detallada de la objeción en palabras del cliente',
+                            },
+                            respuesta_dada: {
+                                type: 'string',
+                                description: 'Cómo respondiste a la objeción (para que el agente dé seguimiento consistente)',
+                            },
+                        },
+                        required: ['tipo_objecion', 'descripcion'],
                     },
                 },
             },
@@ -213,32 +291,104 @@ export class AiService implements OnModuleInit {
         ].filter(Boolean).join(' | ') || 'Sin perfil registrado aún';
 
         const contextoCliente = lead?.contexto_ia
-            ? `\n*CONTEXTO ACUMULADO DEL CLIENTE (escrito por ti en conversaciones anteriores):*\n${lead.contexto_ia}\n`
+            ? `\n*MEMORIA DEL CLIENTE (de conversaciones anteriores):*\n${lead.contexto_ia}\n`
             : '';
 
-        const systemPrompt = `Eres Maya, asesora virtual inteligente de RENAV Real Estate Group. Tu objetivo principal es CALIFICAR al lead, construir su perfil inmobiliario y facilitar el trabajo del agente humano.
+        // ── Dynamic profiling checklist ──────────────────────────────────
+        const checklist = {
+            nombre: lead?.contacto?.nombre && lead.contacto.nombre !== 'cliente' ? `✅ ${lead.contacto.nombre}` : '❌ Nombre',
+            telefono: lead?.contacto?.telefono ? '✅ Teléfono' : '❌ Teléfono',
+            correo: lead?.contacto?.correo ? '✅ Correo' : '❌ Correo',
+            tipo_inmueble: br?.tipo_inmueble?.nombre ? `✅ ${br.tipo_inmueble.nombre}` : '❌ Tipo de inmueble',
+            zona: br?.zona || sol?.zona ? `✅ ${br?.zona || sol?.zona}` : '❌ Zona/ubicación',
+            ciudad: br?.ciudad || sol?.ciudad ? `✅ ${br?.ciudad || sol?.ciudad}` : '❌ Ciudad',
+            presupuesto: sol?.presupuesto_max || sol?.presupuesto_min ? `✅ $${sol?.presupuesto_min || '?'}-$${sol?.presupuesto_max || '?'}` : '❌ Presupuesto',
+            recamaras: br?.recamaras ? `✅ ${br.recamaras} recámaras` : '❌ Recámaras',
+            m2: br?.m2_construidos_requeridos ? `✅ ${br.m2_construidos_requeridos}m²` : '❌ M² deseados',
+            motivacion: '❌ Motivación de compra (¿por qué busca?, ¿para vivir/inversión?)',
+            temporalidad: '❌ Temporalidad (¿cuándo quiere comprar/mudarse?)',
+        };
 
-*DATOS DEL LEAD:*
-- Nombre: ${lead?.contacto?.nombre || 'cliente'}
+        // Count gathered vs missing
+        const gathered = Object.values(checklist).filter(v => v.startsWith('✅')).length;
+        const total = Object.keys(checklist).length;
+        const checklistStr = Object.values(checklist).join('\n');
+
+        // Determine conversation phase based on data completeness
+        let fase: string;
+        if (gathered <= 2) {
+            fase = 'FASE 1 — SALUDO Y DESCUBRIMIENTO: Preséntate brevemente y haz UNA pregunta abierta para entender qué busca el cliente. Ejemplo: "¿Qué tipo de propiedad te interesa?" o "¿Cuéntame, qué estás buscando?"';
+        } else if (gathered <= 5) {
+            fase = 'FASE 2 — PERFILAMIENTO: Ya sabes algo del cliente. Haz preguntas naturales para llenar los campos faltantes del checklist. NO hagas más de 1-2 preguntas por mensaje. Intercala con comentarios relevantes sobre lo que ya sabes.';
+        } else if (gathered <= 8) {
+            fase = 'FASE 3 — CALIFICACIÓN Y RECOMENDACIÓN: Tienes suficiente perfil. Busca propiedades que coincidan y preséntalas. Pregunta sobre temporalidad e intención de compra si no las tienes.';
+        } else {
+            fase = 'FASE 4 — CIERRE: Perfil casi completo. Enfócate en proponer visitas, agendar citas, y conectar con el agente humano. Sé proactivo sugiriendo próximos pasos.';
+        }
+
+        // Determine temperature label
+        let temperatura: string;
+        if (gathered <= 2) temperatura = '🔵 FRÍO — Primer contacto o muy poca información';
+        else if (gathered <= 5) temperatura = '🟡 TIBIO — Interés detectado, perfil incompleto';
+        else if (gathered <= 8) temperatura = '🟠 CALIENTE — Perfil sólido, necesita propuesta';
+        else temperatura = '🔴 MUY CALIENTE — Listo para visita/cierre';
+
+        const systemPrompt = `Eres *Maya*, asesora virtual de RENAV Real Estate Group. Eres experta en bienes raíces en la zona de Colima/Manzanillo. Tu personalidad: profesional, cálida, empática, y directa. Nunca suenas robótica ni genérica.
+
+═══════════════════════════════════════
+📋 DATOS DEL LEAD
+═══════════════════════════════════════
+- Nombre: ${lead?.contacto?.nombre || 'No identificado'}
 - Estado CRM: ${lead?.estado || 'NUEVO'} | Prioridad: ${lead?.prioridad || 'MEDIA'}
+- Temperatura: ${temperatura}
 - Perfil registrado: ${perfil}
 ${contextoCliente}
-*REGLAS DE HERRAMIENTAS (OBLIGATORIAS):*
-- Si el cliente menciona tipo de inmueble, zona, presupuesto, recámaras o m²: llama INMEDIATAMENTE *actualizar_perfil_inmobiliario* con todos los datos mencionados ANTES de responder. Convierte expresiones como "4 millones" → 4000000, "500 mil" → 500000.
-- Si detectas cambio en nivel de interés o intención de compra: llama *actualizar_lead* con el estado/prioridad correspondiente.
-  - BAJA: solo curiosidad | MEDIA: interés sin urgencia | ALTA: presupuesto + plazo claros | URGENTE: quiere visitar o comprar ya
-- Si el perfil tiene tipo + zona o presupuesto: llama *buscar_propiedades* para mostrar opciones reales.
-- Si el cliente menciona querer visitar o agendar reunión: llama *agendar_cita* INMEDIATAMENTE.
-- Después de cada conversación relevante: llama *crear_nota* con el resumen de datos clave para el agente humano.
-- Cuando tengas tipo + zona + presupuesto + al menos una señal de intención: llama *actualizar_lead* con estado=CALIFICADO.
-- Al final de CADA respuesta, llama *actualizar_contexto* con un resumen actualizado de todo lo que sabes del cliente (personalidad, situación, preferencias no estructuradas, disponibilidad, motivaciones). Reemplaza el contexto anterior con una versión mejorada y acumulativa.
-- NUNCA digas "voy a registrar" o "voy a guardar" — simplemente llama la herramienta y confirma al cliente.
+═══════════════════════════════════════
+📊 CHECKLIST DE PERFILAMIENTO (${gathered}/${total})
+═══════════════════════════════════════
+${checklistStr}
 
-*REGLAS DE FORMATO:*
-- Usa formato WhatsApp: *texto* para negritas (un solo asterisco), _texto_ para cursiva.
-- Respuestas concisas (máximo 3-4 oraciones). No listes datos técnicos de propiedades en texto cuando los muestres en tarjetas.
-- Responde en español, tono profesional y amable.
-- Nunca inventes propiedades ni datos del cliente.`;
+═══════════════════════════════════════
+🎯 FASE ACTUAL
+═══════════════════════════════════════
+${fase}
+
+═══════════════════════════════════════
+🧠 ESTRATEGIA CONVERSACIONAL
+═══════════════════════════════════════
+1. *Extracción natural*: NUNCA hagas listas de preguntas ni interrogatorios. Extrae información de forma conversacional. En vez de "¿Cuál es tu presupuesto?", di algo como "Para darte las mejores opciones, ¿más o menos en qué rango de inversión estás pensando?"
+2. *Máximo 1-2 preguntas por mensaje*: Intercala con valor (dato del mercado, observación, validación de lo que dijo el cliente).
+3. *Escucha activa*: Siempre refleja lo que el cliente dijo antes de preguntar algo nuevo. Ejemplo: "Entiendo, una casa en Manzanillo para tu familia suena increíble. ¿Y más o menos cuántas recámaras necesitarían?"
+4. *Manejo de objeciones*: Si el cliente duda, empatiza primero, luego reencuadra. Si dice "es muy caro", no bajes precio — pregunta qué valor espera y busca alternativas.
+5. *Urgencia natural*: Si hay propiedades que coinciden con su perfil, menciona disponibilidad ("Hay pocas unidades en esa zona, te las comparto para que las veas").
+6. *Transición a agente humano*: Cuando el cliente quiera visitar, negociar precio, o hacer una oferta formal, sugiere conectar con un asesor humano de RENAV.
+
+═══════════════════════════════════════
+🔧 REGLAS DE HERRAMIENTAS (OBLIGATORIAS)
+═══════════════════════════════════════
+- *actualizar_perfil_inmobiliario*: Llama INMEDIATAMENTE cuando el cliente mencione tipo de inmueble, zona, presupuesto, recámaras o m². Convierte: "4 millones" → 4000000, "500 mil" → 500000.
+- *actualizar_lead*: Llama cuando detectes cambio en interés o intención. Criterios:
+  • BAJA: curiosidad, sin datos concretos
+  • MEDIA: interés real pero sin urgencia ni presupuesto definido
+  • ALTA: presupuesto + zona + tipo claros
+  • URGENTE: quiere visitar, hacer oferta o comprar ya
+- *buscar_propiedades*: Llama cuando tengas al menos tipo + (zona O presupuesto). Muestra máximo 3 opciones destacadas.
+- *agendar_cita*: Llama cuando el cliente quiera ver propiedades o reunirse.
+- *clasificar_cliente*: Llama cuando tengas suficiente información para determinar la temperatura del lead. Incluye las señales que observaste.
+- *registrar_objecion*: Llama cuando el cliente exprese una duda, barrera o resistencia (precio alto, indecisión, mala experiencia previa, etc.).
+- *solicitar_agente_humano*: Llama cuando el cliente quiera negociar precio, hacer una oferta, visitar una propiedad específica, o cuando necesite atención especializada que supere tu capacidad. Siempre di al cliente que un asesor lo contactará pronto.
+- *crear_nota*: Llama con datos clave descubiertos que el agente humano debe saber.
+- *actualizar_contexto*: Llama al final de CADA respuesta con un resumen acumulativo y mejorado de todo lo que sabes del cliente. Este es tu "cuaderno de notas" para no olvidar nada entre conversaciones.
+- NUNCA digas "voy a registrar" o "voy a guardar" — simplemente hazlo silenciosamente.
+
+═══════════════════════════════════════
+✍️ FORMATO
+═══════════════════════════════════════
+- Formato WhatsApp: *negritas* con un asterisco, _cursiva_ con guión bajo.
+- Máximo 3-4 oraciones por respuesta. Sé concisa pero cálida.
+- Español, tono profesional y cercano. Tutea al cliente.
+- NUNCA inventes propiedades ni datos. Solo comparte lo que devuelve buscar_propiedades.
+- Cuando muestres propiedades, destaca: nombre del desarrollo, zona, tipo, precio y un dato diferenciador.`;
 
         // 4. Build message history (last 20, already ordered chronologically)
         const historial = mensajes.map((m) => ({
@@ -302,6 +452,15 @@ ${contextoCliente}
                             break;
                         case 'actualizar_contexto':
                             result = await this.actualizarContexto(leadId, args);
+                            break;
+                        case 'solicitar_agente_humano':
+                            result = await this.solicitarAgenteHumano(leadId, args);
+                            break;
+                        case 'clasificar_cliente':
+                            result = await this.clasificarCliente(leadId, args);
+                            break;
+                        case 'registrar_objecion':
+                            result = await this.registrarObjecion(leadId, args);
                             break;
                         default:
                             result = { error: 'Herramienta desconocida' };
@@ -476,6 +635,76 @@ ${contextoCliente}
             data: { contexto_ia: args.resumen },
         });
         return { ok: true };
+    }
+
+    // ── Tool: solicitar agente humano ─────────────────────────────────────────
+    private async solicitarAgenteHumano(leadId: number, args: { motivo: string; urgente?: boolean }) {
+        const data: any = { prioridad: args.urgente ? 'URGENTE' : 'ALTA' };
+
+        const [lead] = await Promise.all([
+            this.prisma.crmLead.findUnique({
+                where: { id_lead: leadId },
+                select: { contacto: { select: { nombre: true } } },
+            }),
+            this.prisma.crmLead.update({ where: { id_lead: leadId }, data }),
+        ]);
+
+        const nota = `🚨 REQUIERE AGENTE HUMANO\n${args.motivo}${args.urgente ? '\n⏰ URGENTE — requiere atención en menos de 24h' : ''}`;
+        await this.prisma.crmActividad.create({
+            data: { id_lead: leadId, tipo: 'NOTE', descripcion: nota },
+        });
+
+        // Notify all connected CRM clients via SSE
+        this.eventsService.emit({
+            type: 'agente_requerido',
+            payload: {
+                leadId,
+                contacto: lead?.contacto?.nombre || `Lead #${leadId}`,
+                motivo: args.motivo,
+                urgente: args.urgente ?? false,
+            },
+        });
+
+        return { ok: true, alerta_creada: true, prioridad: data.prioridad };
+    }
+
+    // ── Tool: clasificar cliente (temperatura) ─────────────────────────────────
+    private async clasificarCliente(leadId: number, args: {
+        temperatura: string; senales: string; accion_sugerida?: string;
+    }) {
+        // Map temperature to lead priority + state
+        const tempMap: Record<string, { prioridad: string; estado?: string }> = {
+            'FRIO': { prioridad: 'BAJA' },
+            'TIBIO': { prioridad: 'MEDIA', estado: 'EN PROCESO' },
+            'CALIENTE': { prioridad: 'ALTA', estado: 'EN PROCESO' },
+            'MUY_CALIENTE': { prioridad: 'URGENTE', estado: 'CALIFICADO' },
+        };
+
+        const mapping = tempMap[args.temperatura] || { prioridad: 'MEDIA' };
+        const data: any = { prioridad: mapping.prioridad };
+        if (mapping.estado) data.estado = mapping.estado;
+
+        await this.prisma.crmLead.update({ where: { id_lead: leadId }, data });
+
+        // Create internal note with the classification
+        const notaTexto = `🌡️ Clasificación: ${args.temperatura}\nSeñales: ${args.senales}${args.accion_sugerida ? `\nAcción sugerida: ${args.accion_sugerida}` : ''}`;
+        await this.prisma.crmActividad.create({
+            data: { id_lead: leadId, tipo: 'NOTE', descripcion: notaTexto },
+        });
+
+        return { ok: true, temperatura: args.temperatura, lead_actualizado: data };
+    }
+
+    // ── Tool: registrar objeción ──────────────────────────────────────────────
+    private async registrarObjecion(leadId: number, args: {
+        tipo_objecion: string; descripcion: string; respuesta_dada?: string;
+    }) {
+        const notaTexto = `⚠️ Objeción [${args.tipo_objecion}]: ${args.descripcion}${args.respuesta_dada ? `\nRespuesta dada por Maya: ${args.respuesta_dada}` : ''}`;
+        await this.prisma.crmActividad.create({
+            data: { id_lead: leadId, tipo: 'NOTE', descripcion: notaTexto },
+        });
+
+        return { ok: true, objecion_registrada: args.tipo_objecion };
     }
 
     // ── Format inventory unit ─────────────────────────────────────────────────

@@ -1,13 +1,17 @@
 import { Controller, Get, Post, Body, Param } from '@nestjs/common';
 import { MensajesService } from './mensajes.service';
+import { WhatsappSenderService } from '../../whatsapp/whatsapp-sender.service';
 
 @Controller('mensajes')
 export class MensajesController {
-    constructor(private readonly mensajesService: MensajesService) { }
+    constructor(
+        private readonly mensajesService: MensajesService,
+        private readonly whatsappSender: WhatsappSenderService,
+    ) { }
 
     @Post()
-    create(@Body() body: any) {
-        return this.mensajesService.create({
+    async create(@Body() body: any) {
+        const mensaje = await this.mensajesService.create({
             id_lead: Number(body.id_lead),
             id_usuario: body.id_usuario ? Number(body.id_usuario) : undefined,
             es_entrante: Boolean(body.es_entrante),
@@ -15,6 +19,13 @@ export class MensajesController {
             texto: body.texto,
             media_url: body.media_url,
         });
+
+        // Reenviar por WhatsApp si es mensaje saliente del agente
+        if (!mensaje.es_entrante) {
+            this.whatsappSender.sendMessageToLead(mensaje.id_lead, mensaje.texto);
+        }
+
+        return mensaje;
     }
 
     @Get('lead/:id')
