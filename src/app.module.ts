@@ -8,12 +8,9 @@ import { UploadModule } from './upload/upload.module';
 import { AiModule } from './ai/ai.module';
 
 import { ConfigModule } from '@nestjs/config';
-<<<<<<< Updated upstream
 import { ScheduleModule } from '@nestjs/schedule';
-=======
 import { WhatsappModule } from './whatsapp/whatsapp.module';
 import { EventsModule } from './events/events.module';
->>>>>>> Stashed changes
 
 @Module({
   imports: [
