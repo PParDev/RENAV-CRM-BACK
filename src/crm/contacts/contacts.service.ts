@@ -36,6 +36,7 @@ export class ContactsService {
             take,
             where,
             orderBy: { creado_en: 'desc' },
+            include: { leads: { include: { servicio_principal: true } } }
         });
     }
 
@@ -43,6 +44,7 @@ export class ContactsService {
     async findOne(id: number): Promise<CrmContacto> {
         const contact = await this.prisma.crmContacto.findUnique({
             where: { id_contacto: id },
+            include: { leads: { include: { servicio_principal: true } } }
         });
 
         if (!contact || !contact.activo) {

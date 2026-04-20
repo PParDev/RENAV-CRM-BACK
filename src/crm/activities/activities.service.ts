@@ -36,7 +36,7 @@ export class ActivitiesService {
         return this.prisma.crmActividad.findMany({
             where,
             orderBy: { creada_en: 'desc' },
-            include: { lead: true, usuario: true },
+            include: { lead: { include: { contacto: true } }, usuario: true },
         });
     }
 

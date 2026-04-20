@@ -293,6 +293,8 @@ model CrmLead {
   id_usuario_asignado   Int?
   notas_iniciales       String?
   contexto_ia           String?  // Resumen acumulativo del cliente escrito por la IA
+  etiquetas_ia          String[] @default([]) // Etiquetas automáticas (AI Tags)
+  sentimiento           String?  // Ej. Positivo, Neutral, Indeciso, Molesto
   activo                Boolean  @default(true)
   creado_en             DateTime @default(now()) @db.Timestamptz
   actualizado_en        DateTime @default(now()) @updatedAt @db.Timestamptz
@@ -509,6 +511,8 @@ model CrmSolicitudBienesRaices {
   banos                     Int?
   estacionamientos          Int?
   m2_construidos_requeridos Decimal? @db.Decimal(12, 2)
+  motivacion                String?
+  temporalidad              String?
 
   solicitud     CrmSolicitudServicio @relation(fields: [id_solicitud], references: [id_solicitud], onDelete: Cascade)
   tipo_inmueble CatTipoInmueble?     @relation(fields: [id_tipo_inmueble], references: [id_tipo_inmueble])

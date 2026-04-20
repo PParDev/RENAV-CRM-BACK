@@ -53,6 +53,79 @@ export class WhatsappSenderService {
         return result;
     }
 
+    async sendMedia(toPhone: string, mediaUrl: string, caption?: string): Promise<any> {
+        const token = this.configService.get<string>('WHATSAPP_TOKEN');
+        const phoneId = this.configService.get<string>('WHATSAPP_PHONE_ID');
+        if (!token || !phoneId) return null;
+
+        const cleanPhone = toPhone.replace(/\D/g, '');
+        const url = `https://graph.facebook.com/v18.0/${phoneId}/messages`;
+        
+        // Determine type based on extension (simple assumption)
+        const isImage = mediaUrl.match(/\.(jpeg|jpg|gif|png|webp)$/i) != null;
+        const msgType = isImage ? 'image' : 'document';
+        
+        const payload: any = {
+            messaging_product: 'whatsapp',
+            recipient_type: 'individual',
+            to: cleanPhone,
+            type: msgType,
+        };
+        
+        payload[msgType] = { link: mediaUrl };
+        if (caption) payload[msgType].caption = caption;
+
+        const response = await fetch(url, {
+            method: 'POST',
+            headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload),
+        });
+
+        const result = await response.json();
+        if (!response.ok || result.error) {
+            this.logger.error(`[WhatsApp] API Media error: ${JSON.stringify(result.error ?? result)}`);
+        }
+        return result;
+    }
+
+    async sendInteractiveButtons(toPhone: string, text: string, buttons: string[]): Promise<any> {
+        const token = this.configService.get<string>('WHATSAPP_TOKEN');
+        const phoneId = this.configService.get<string>('WHATSAPP_PHONE_ID');
+        if (!token || !phoneId) return null;
+
+        const cleanPhone = toPhone.replace(/\D/g, '');
+        const url = `https://graph.facebook.com/v18.0/${phoneId}/messages`;
+        
+        const payload = {
+            messaging_product: 'whatsapp',
+            recipient_type: 'individual',
+            to: cleanPhone,
+            type: 'interactive',
+            interactive: {
+                type: 'button',
+                body: { text: text },
+                action: {
+                    buttons: buttons.slice(0, 3).map((b, i) => ({
+                        type: 'reply',
+                        reply: { id: `btn_${i}`, title: b.substring(0, 20) } 
+                    }))
+                }
+            }
+        };
+
+        const response = await fetch(url, {
+            method: 'POST',
+            headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload),
+        });
+
+        const result = await response.json();
+        if (!response.ok || result.error) {
+            this.logger.error(`[WhatsApp] API Interactive error: ${JSON.stringify(result.error ?? result)}`);
+        }
+        return result;
+    }
+
     /**
      * Busca el teléfono del contacto asociado al lead y envía el mensaje.
      * Si el contacto no tiene teléfono, omite el envío silenciosamente.

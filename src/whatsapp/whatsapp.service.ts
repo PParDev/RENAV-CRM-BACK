@@ -68,6 +68,17 @@ export class WhatsappService {
                 texto: text,
             },
         });
+
+        // 4. Auto-transition: if the lead is still NUEVO, mark it as EN PROCESO
+        //    since there is now an active conversation going on.
+        if (lead.estado === 'NUEVO') {
+            await this.prisma.crmLead.update({
+                where: { id_lead: lead.id_lead },
+                data: { estado: 'EN PROCESO' },
+            });
+            console.log(`[WhatsApp] Lead ${lead.id_lead} auto-transitioned NUEVO → EN PROCESO`);
+            this.eventsService.emit({ type: 'lead_actualizado', payload: { id_lead: lead.id_lead, estado: 'EN PROCESO' } });
+        }
         
         console.log(`[WhatsApp] New message from ${cleanPhone} saved to lead ${lead.id_lead}`);
         // Notify frontend: new incoming message ready
@@ -96,8 +107,16 @@ export class WhatsappService {
                     answerToSend = answerToSend.slice(0, markerIdx).trimEnd();
                 }
 
-                await this.sender.sendMessage(fromPhone, answerToSend);
-                console.log(`[WhatsApp] AI responded to ${cleanPhone}`);
+                if (aiResult.mediaUrl) {
+                    await this.sender.sendMedia(fromPhone, aiResult.mediaUrl, answerToSend);
+                    console.log(`[WhatsApp] AI responded with Media to ${cleanPhone}`);
+                } else if (aiResult.botones && aiResult.botones.length > 0) {
+                    await this.sender.sendInteractiveButtons(fromPhone, answerToSend, aiResult.botones);
+                    console.log(`[WhatsApp] AI responded with Interactive Buttons to ${cleanPhone}`);
+                } else {
+                    await this.sender.sendMessage(fromPhone, answerToSend);
+                    console.log(`[WhatsApp] AI responded to ${cleanPhone}`);
+                }
 
                 // Notify frontend that the AI reply was stored
                 this.eventsService.emit({

@@ -235,13 +235,15 @@ export class LeadsService {
         if (lead.contacto?.telefono) score += 5;
         if (lead.contacto?.correo) score += 5;
 
-        // ── Completitud del perfil inmobiliario (máx 20) ──────────────────────
+        // ── Completitud del perfil inmobiliario (máx 30) ──────────────────────
         const sol = lead.solicitudes?.[0];
-        const br = sol?.bienes_raices;
+        const br = sol?.bienes_raices as any;
         if (sol?.presupuesto_max || sol?.presupuesto_min) score += 5;
         if (br?.id_tipo_inmueble) score += 5;
         if (sol?.zona || sol?.ciudad || br?.zona || br?.ciudad) score += 5;
         if (br?.recamaras || br?.m2_construidos_requeridos) score += 5;
+        if (br?.motivacion) score += 5;
+        if (br?.temporalidad) score += 5;
 
         // ── Engagement (máx 15) ───────────────────────────────────────────────
         if (totalMensajes >= 3) score += 5;

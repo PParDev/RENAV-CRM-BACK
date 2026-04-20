@@ -115,6 +115,8 @@ export class AiService implements OnModuleInit {
                             recamaras: { type: 'number' },
                             banos: { type: 'number' },
                             m2_requeridos: { type: 'number' },
+                            motivacion: { type: 'string', description: 'Por qué busca comprar o invertir (ej. "Para vivir", "Inversión para rentar", "Vacacional")' },
+                            temporalidad: { type: 'string', description: 'Para cuándo espera concretar la compra o mudanza (ej. "En 3 meses", "Inmediatamente", "El próximo año")' },
                         },
                         required: [],
                     },
@@ -217,6 +219,16 @@ export class AiService implements OnModuleInit {
                                 type: 'string',
                                 description: 'Acción recomendada para el agente humano (ej: "Contactar en 24h para agendar visita", "Enviar brochure del desarrollo X")',
                             },
+                            sentimiento: {
+                                type: 'string',
+                                enum: ['POSITIVO', 'NEUTRAL', 'INDECISO', 'MOLESTO'],
+                                description: 'Estado de ánimo actual del cliente durante la conversación',
+                            },
+                            etiquetas: {
+                                type: 'array',
+                                items: { type: 'string' },
+                                description: 'Etiquetas clave que definen al cliente (ej. "Inversionista", "Familia", "Busca crédito", "Extranjero", "Urgente")'
+                            },
                         },
                         required: ['temperatura', 'senales'],
                     },
@@ -249,11 +261,43 @@ export class AiService implements OnModuleInit {
                     },
                 },
             },
+            {
+                type: 'function',
+                function: {
+                    name: 'enviar_ficha_tecnica',
+                    description: 'Envía una ficha técnica (imagen o PDF) al cliente. Úsala cuando el cliente acepta conocer más sobre una opción.',
+                    parameters: {
+                        type: 'object',
+                        properties: {
+                            codigo_unidad: { type: 'string', description: 'Código de la unidad a enviar (ej. PROJ-101)' },
+                            mensaje_intro: { type: 'string', description: 'Opcional. Mensaje introductorio que acompaña la imagen.' }
+                        },
+                        required: ['codigo_unidad'],
+                    },
+                },
+            },
+            {
+                type: 'function',
+                function: {
+                    name: 'enviar_mensaje_interactivo',
+                    description: 'Envíale al cliente un mensaje con opciones rápidas (botones). Úsalo para que le sea más fácil responder.',
+                    parameters: {
+                        type: 'object',
+                        properties: {
+                            texto: { type: 'string', description: 'El texto principal que acompaña a los botones' },
+                            opciones: { 
+                                type: 'array', items: { type: 'string' }, description: 'Máximo 3 opciones cortas (ej. "Agendar Visita", "Hablemos de precios")' 
+                            }
+                        },
+                        required: ['texto', 'opciones'],
+                    },
+                },
+            },
         ];
     }
 
     // ── Main entry point ─────────────────────────────────────────────────────
-    async chat(leadId: number, userMessage: string, esEntrante: boolean): Promise<{ respuesta: string }> {
+    async chat(leadId: number, userMessage: string, esEntrante: boolean): Promise<{ respuesta: string, botones?: string[], mediaUrl?: string, mediaCaption?: string }> {
         const key = this.config.get<string>('OPENROUTER_KEY');
 
         // 1. Load lead context
@@ -305,8 +349,8 @@ export class AiService implements OnModuleInit {
             presupuesto: sol?.presupuesto_max || sol?.presupuesto_min ? `✅ $${sol?.presupuesto_min || '?'}-$${sol?.presupuesto_max || '?'}` : '❌ Presupuesto',
             recamaras: br?.recamaras ? `✅ ${br.recamaras} recámaras` : '❌ Recámaras',
             m2: br?.m2_construidos_requeridos ? `✅ ${br.m2_construidos_requeridos}m²` : '❌ M² deseados',
-            motivacion: '❌ Motivación de compra (¿por qué busca?, ¿para vivir/inversión?)',
-            temporalidad: '❌ Temporalidad (¿cuándo quiere comprar/mudarse?)',
+            motivacion: (br as any)?.motivacion ? `✅ ${(br as any).motivacion}` : '❌ Motivación de compra (¿por qué busca?, ¿para vivir/inversión?)',
+            temporalidad: (br as any)?.temporalidad ? `✅ ${(br as any).temporalidad}` : '❌ Temporalidad (¿cuándo quiere comprar/mudarse?)',
         };
 
         // Count gathered vs missing
@@ -374,7 +418,7 @@ ${fase}
   • URGENTE: quiere visitar, hacer oferta o comprar ya
 - *buscar_propiedades*: Llama cuando tengas al menos tipo + (zona O presupuesto). Muestra máximo 3 opciones destacadas.
 - *agendar_cita*: Llama cuando el cliente quiera ver propiedades o reunirse.
-- *clasificar_cliente*: Llama cuando tengas suficiente información para determinar la temperatura del lead. Incluye las señales que observaste.
+- *clasificar_cliente*: Llama cuando tengas suficiente información para determinar la temperatura del lead. Siempre incluye las 'etiquetas' y el 'sentimiento' actual del lead.
 - *registrar_objecion*: Llama cuando el cliente exprese una duda, barrera o resistencia (precio alto, indecisión, mala experiencia previa, etc.).
 - *solicitar_agente_humano*: Llama cuando el cliente quiera negociar precio, hacer una oferta, visitar una propiedad específica, o cuando necesite atención especializada que supere tu capacidad. Siempre di al cliente que un asesor lo contactará pronto.
 - *crear_nota*: Llama con datos clave descubiertos que el agente humano debe saber.
@@ -406,6 +450,10 @@ ${fase}
         let respuesta = '';
         let iteraciones = 0;
         const maxIter = 8;
+        
+        let botonesSalida: string[] | undefined;
+        let mediaUrlSalida: string | undefined;
+        let mediaCaptionSalida: string | undefined;
 
         while (iteraciones < maxIter) {
             iteraciones++;
@@ -462,6 +510,20 @@ ${fase}
                         case 'registrar_objecion':
                             result = await this.registrarObjecion(leadId, args);
                             break;
+                        case 'enviar_ficha_tecnica':
+                            const unidadUrl = await this.enviarFichaTecnica(args);
+                            if (unidadUrl.url) {
+                                mediaUrlSalida = unidadUrl.url;
+                                mediaCaptionSalida = args.mensaje_intro || `Ficha técnica ${args.codigo_unidad}`;
+                                result = { ok: true, info: "La ficha se adjuntará. Asegúrate de incluir un texto de acompañamiento en tu respuesta final de texto." };
+                            } else {
+                                result = { error: "No se encontró imagen o ficha para esta unidad." };
+                            }
+                            break;
+                        case 'enviar_mensaje_interactivo':
+                            botonesSalida = args.opciones;
+                            result = { ok: true, info: `Botones listos para adjuntar: [${args.opciones.join(', ')}]. Usa un mensaje conciso de texto para acompañarlos.` };
+                            break;
                         default:
                             result = { error: 'Herramienta desconocida' };
                     }
@@ -484,7 +546,7 @@ ${fase}
             data: { id_lead: leadId, es_entrante: false, canal: 'AI', texto: respuesta },
         });
 
-        return { respuesta };
+        return { respuesta, botones: botonesSalida, mediaUrl: mediaUrlSalida, mediaCaption: mediaCaptionSalida };
     }
 
     // ── Tool: buscar propiedades ──────────────────────────────────────────────
@@ -492,41 +554,63 @@ ${fase}
         tipo_inmueble?: string; precio_min?: number; precio_max?: number;
         m2_min?: number; m2_max?: number; zona?: string;
     }) {
-        const where: any = {};
-        if (args.tipo_inmueble) {
-            where.tipo_inmueble = { nombre: { contains: args.tipo_inmueble, mode: 'insensitive' } };
-        }
-        if (args.precio_min !== undefined || args.precio_max !== undefined) {
-            where.precios_lista = {};
-            if (args.precio_min !== undefined) where.precios_lista.gte = args.precio_min;
-            if (args.precio_max !== undefined) where.precios_lista.lte = args.precio_max;
-        }
-        if (args.m2_min !== undefined || args.m2_max !== undefined) {
-            where.m2_construccion = {};
-            if (args.m2_min !== undefined) where.m2_construccion.gte = args.m2_min;
-            if (args.m2_max !== undefined) where.m2_construccion.lte = args.m2_max;
-        }
-        if (args.zona) {
-            where.desarrollo = { zona: { nombre: { contains: args.zona, mode: 'insensitive' } } };
-        }
-        where.estado_unidad = { nombre: { contains: 'disponible', mode: 'insensitive' } };
+        const buildWhere = (strict: boolean) => {
+            const where: any = {};
+            if (args.tipo_inmueble) {
+                where.tipo_inmueble = { nombre: { contains: args.tipo_inmueble, mode: 'insensitive' } };
+            }
+            if (args.precio_min !== undefined || args.precio_max !== undefined) {
+                where.precios_lista = {};
+                if (args.precio_min !== undefined) where.precios_lista.gte = strict ? args.precio_min : args.precio_min * 0.85; // Ampliación -15%
+                if (args.precio_max !== undefined) where.precios_lista.lte = strict ? args.precio_max : args.precio_max * 1.15; // Ampliación +15%
+            }
+            if (strict && (args.m2_min !== undefined || args.m2_max !== undefined)) {
+                where.m2_construccion = {};
+                if (args.m2_min !== undefined) where.m2_construccion.gte = args.m2_min;
+                if (args.m2_max !== undefined) where.m2_construccion.lte = args.m2_max;
+            }
+            if (strict && args.zona) {
+                where.desarrollo = { zona: { nombre: { contains: args.zona, mode: 'insensitive' } } };
+            } else if (!strict && args.zona) {
+                // Modo flexible: se permite cualquier zona temporalmente si el precio/tipo concuerda.
+            }
+            where.estado_unidad = { nombre: { contains: 'disponible', mode: 'insensitive' } };
+            return where;
+        };
 
+        // Intento Estricto
         const unidades = await this.prisma.invUnidad.findMany({
-            where, take: 5,
+            where: buildWhere(true), take: 5,
             include: { desarrollo: { include: { zona: true } }, tipo_inmueble: true, estado_unidad: true, tipologia: true },
             orderBy: { precios_lista: 'asc' },
         });
 
         if (unidades.length === 0) {
-            const fallback = await this.prisma.invUnidad.findMany({
-                where: { estado_unidad: { nombre: { contains: 'disponible', mode: 'insensitive' } } },
-                take: 5,
-                include: { desarrollo: { include: { zona: true } }, tipo_inmueble: true, tipologia: true },
+            // Intento Flexible (amplía precio +-15% y retira estrictez de zona y m2)
+            const fuzzyUnidades = await this.prisma.invUnidad.findMany({
+                where: buildWhere(false), take: 5,
+                include: { desarrollo: { include: { zona: true } }, tipo_inmueble: true, tipologia: true, estado_unidad: true },
                 orderBy: { precios_lista: 'asc' },
             });
-            return { encontradas: 0, mensaje: 'Sin coincidencias exactas. Alternativas:', propiedades: fallback.map(this.formatUnit) };
+            if (fuzzyUnidades.length === 0) {
+                 const fallback = await this.prisma.invUnidad.findMany({
+                    where: { estado_unidad: { nombre: { contains: 'disponible', mode: 'insensitive' } } },
+                    take: 5,
+                    include: { desarrollo: { include: { zona: true } }, tipo_inmueble: true, tipologia: true },
+                    orderBy: { precios_lista: 'asc' },
+                });
+                return { tipo_match: 'NINGUNO', encontradas: 0, mensaje: 'Sin coincidencias. Las siguientes son alternativas disponibles recomendadas al azar:', propiedades: fallback.map(u => this.formatUnit(u)) };
+            }
+            return { tipo_match: 'FLEXIBLE', encontradas: fuzzyUnidades.length, mensaje: 'Opciones SIMILARES. Estirado tu margen de precio en ±15% y buscando zonas aledañas:', propiedades: fuzzyUnidades.map(u => this.formatUnit(u)) };
         }
-        return { encontradas: unidades.length, propiedades: unidades.map(this.formatUnit) };
+        return { tipo_match: 'EXACTO', encontradas: unidades.length, propiedades: unidades.map(u => this.formatUnit(u)) };
+    }
+
+    private async enviarFichaTecnica(args: { codigo_unidad: string }) {
+        const unidad = await this.prisma.invUnidad.findFirst({
+            where: { codigo_unidad: { contains: args.codigo_unidad, mode: 'insensitive' } }
+        });
+        return { url: unidad?.imagen_url };
     }
 
     // ── Tool: actualizar lead ─────────────────────────────────────────────────
@@ -545,6 +629,7 @@ ${fase}
         tipo_inmueble?: string; ciudad?: string; zona?: string;
         presupuesto_min?: number; presupuesto_max?: number;
         recamaras?: number; banos?: number; m2_requeridos?: number;
+        motivacion?: string; temporalidad?: string;
     }) {
         // Find or create solicitud for Bienes Raices
         let solicitud = await this.prisma.crmSolicitudServicio.findFirst({
@@ -591,6 +676,8 @@ ${fase}
         if (args.recamaras !== undefined) brData.recamaras = args.recamaras;
         if (args.banos !== undefined) brData.banos = args.banos;
         if (args.m2_requeridos !== undefined) brData.m2_construidos_requeridos = args.m2_requeridos;
+        if (args.motivacion) brData.motivacion = args.motivacion;
+        if (args.temporalidad) brData.temporalidad = args.temporalidad;
 
         if (Object.keys(brData).length) {
             await this.prisma.crmSolicitudBienesRaices.upsert({
@@ -671,6 +758,7 @@ ${fase}
     // ── Tool: clasificar cliente (temperatura) ─────────────────────────────────
     private async clasificarCliente(leadId: number, args: {
         temperatura: string; senales: string; accion_sugerida?: string;
+        sentimiento?: string; etiquetas?: string[];
     }) {
         // Map temperature to lead priority + state
         const tempMap: Record<string, { prioridad: string; estado?: string }> = {
@@ -683,11 +771,13 @@ ${fase}
         const mapping = tempMap[args.temperatura] || { prioridad: 'MEDIA' };
         const data: any = { prioridad: mapping.prioridad };
         if (mapping.estado) data.estado = mapping.estado;
+        if (args.sentimiento) data.sentimiento = args.sentimiento;
+        if (args.etiquetas && args.etiquetas.length > 0) data.etiquetas_ia = args.etiquetas;
 
         await this.prisma.crmLead.update({ where: { id_lead: leadId }, data });
 
         // Create internal note with the classification
-        const notaTexto = `🌡️ Clasificación: ${args.temperatura}\nSeñales: ${args.senales}${args.accion_sugerida ? `\nAcción sugerida: ${args.accion_sugerida}` : ''}`;
+        const notaTexto = `🌡️ Clasificación: ${args.temperatura}\nSeñales: ${args.senales}${args.accion_sugerida ? `\nAcción sugerida: ${args.accion_sugerida}` : ''}${args.sentimiento ? `\nSentimiento: ${args.sentimiento}` : ''}${args.etiquetas?.length ? `\nEtiquetas: ${args.etiquetas.join(', ')}` : ''}`;
         await this.prisma.crmActividad.create({
             data: { id_lead: leadId, tipo: 'NOTE', descripcion: notaTexto },
         });
