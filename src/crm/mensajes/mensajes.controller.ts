@@ -12,7 +12,7 @@ export class MensajesController {
     @Post()
     async create(@Body() body: any) {
         const mensaje = await this.mensajesService.create({
-            id_lead: Number(body.id_lead),
+            id_lead: body.id_lead ? Number(body.id_lead) : undefined,
             id_usuario: body.id_usuario ? Number(body.id_usuario) : undefined,
             es_entrante: Boolean(body.es_entrante),
             canal: body.canal,
@@ -20,8 +20,8 @@ export class MensajesController {
             media_url: body.media_url,
         });
 
-        // Reenviar por WhatsApp si es mensaje saliente del agente
-        if (!mensaje.es_entrante) {
+        // Reenviar por WhatsApp si es mensaje saliente del agente Y tiene un lead asociado
+        if (!mensaje.es_entrante && mensaje.id_lead) {
             this.whatsappSender.sendMessageToLead(mensaje.id_lead, mensaje.texto);
         }
 

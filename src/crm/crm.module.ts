@@ -8,6 +8,7 @@ import { PipelinesModule } from './pipelines/pipelines.module';
 import { LeadHistoryModule } from './lead-history/lead-history.module';
 import { LeadServicesModule } from './lead-services/lead-services.module';
 import { MensajesModule } from './mensajes/mensajes.module';
+import { CommunicationsModule } from './communications/communications.module';
 
 @Module({
     imports: [
@@ -20,6 +21,7 @@ import { MensajesModule } from './mensajes/mensajes.module';
         LeadHistoryModule,
         LeadServicesModule,
         MensajesModule,
+        CommunicationsModule,
     ],
 })
 export class CrmModule { }

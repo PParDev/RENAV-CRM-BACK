@@ -1,5 +1,6 @@
 import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
+import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../database/prisma.service';
 import * as bcrypt from 'bcrypt';
 import * as nodemailer from 'nodemailer';
@@ -9,6 +10,7 @@ export class AuthService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly jwtService: JwtService,
+    private readonly configService: ConfigService,
   ) { }
 
   async validateUser(email: string, pass: string): Promise<any> {
@@ -54,15 +56,19 @@ export class AuthService {
     };
 
     const transporter = nodemailer.createTransport({
-      service: 'gmail',
+      host: this.configService.get<string>('SMTP_HOST'),
+      port: this.configService.get<number>('SMTP_PORT'),
+      secure: this.configService.get<number>('SMTP_PORT') === 465,
       auth: {
-        user: 'renavcontactocrm@gmail.com',
-        pass: 'weag nwkk abcf nyrj',
+        user: this.configService.get<string>('SMTP_USER'),
+        pass: this.configService.get<string>('SMTP_PASS'),
       },
     });
 
+    const from = this.configService.get<string>('SMTP_FROM');
+
     const info = await transporter.sendMail({
-      from: '"RENAV CONTACTO CRM" <renavcontactocrm@gmail.com>',
+      from,
       to: email,
       subject: 'Código de recuperación',
       text: `Tu código de recuperación es: ${codigo}\n\nEste código expirará en 15 minutos.`,

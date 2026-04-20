@@ -5,7 +5,7 @@ import { PrismaService } from '../../database/prisma.service';
 export class MensajesService {
     constructor(private prisma: PrismaService) { }
 
-    async create(data: { id_lead: number; id_usuario?: number; es_entrante: boolean; canal?: string; texto: string; media_url?: string }) {
+    async create(data: { id_lead?: number; id_usuario?: number; es_entrante: boolean; canal?: string; texto: string; media_url?: string }) {
         const msg = await this.prisma.crmMensaje.create({
             data: {
                 id_lead: data.id_lead,
@@ -19,12 +19,14 @@ export class MensajesService {
 
         // Auto-transition: if the lead is still NUEVO, move it to EN PROCESO
         // now that there is active conversation happening.
-        const lead = await this.prisma.crmLead.findUnique({ where: { id_lead: data.id_lead }, select: { estado: true } });
-        if (lead?.estado === 'NUEVO') {
-            await this.prisma.crmLead.update({
-                where: { id_lead: data.id_lead },
-                data: { estado: 'EN PROCESO' },
-            });
+        if (data.id_lead) {
+            const lead = await this.prisma.crmLead.findUnique({ where: { id_lead: data.id_lead }, select: { estado: true } });
+            if (lead?.estado === 'NUEVO') {
+                await this.prisma.crmLead.update({
+                    where: { id_lead: data.id_lead },
+                    data: { estado: 'EN PROCESO' },
+                });
+            }
         }
 
         return msg;

@@ -1,11 +1,17 @@
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
+import { NestExpressApplication } from '@nestjs/platform-express';
+import { json, urlencoded } from 'express';
 
 import { AppModule } from './app.module';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create<NestExpressApplication>(AppModule);
+
+  // Aumentar límites para payloads grandes (correos con mucho contenido/adjuntos)
+  app.use(json({ limit: '50mb' }));
+  app.use(urlencoded({ limit: '50mb', extended: true }));
 
   // Habilitar CORS para que el frontend pueda hacer peticiones
   app.enableCors({
@@ -21,8 +27,11 @@ async function bootstrap() {
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true,
-      forbidNonWhitelisted: true,
+      forbidNonWhitelisted: false, // Desactivado para evitar errores con multipart/form-data
       transform: true,
+      transformOptions: {
+        enableImplicitConversion: true, // Ayuda con la conversión de tipos en FormData
+      },
     }),
   );
 

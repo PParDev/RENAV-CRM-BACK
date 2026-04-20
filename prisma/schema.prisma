@@ -389,7 +389,7 @@ model CrmActividad {
 
 model CrmMensaje {
   id_mensaje         Int      @id @default(autoincrement())
-  id_lead            Int
+  id_lead            Int?
   id_usuario         Int?
   es_entrante        Boolean
   canal              String   @default("WEB") // WHATSAPP, EMAIL, WEB, META, SMS
@@ -398,9 +398,13 @@ model CrmMensaje {
   whatsapp_msg_id    String?  @unique
   estatus_entrega    String   @default("ENVIADO") // ENTREGADO, LEIDO, FALLIDO
   activo             Boolean  @default(true)
+  asunto             String?
+  to_email           String?
+  to_name            String?
+  html_cuerpo        String?  @db.Text
   creado_en          DateTime @default(now()) @db.Timestamptz
 
-  lead               CrmLead     @relation(fields: [id_lead], references: [id_lead], onDelete: Cascade)
+  lead               CrmLead?    @relation(fields: [id_lead], references: [id_lead], onDelete: Cascade)
   usuario            CrmUsuario? @relation(fields: [id_usuario], references: [id_usuario], onDelete: SetNull)
 
   @@map("crm_mensaje")
@@ -435,6 +439,19 @@ model CrmSolicitudServicio {
   @@schema("crm")
   @@index([id_lead])
   @@index([id_servicio])
+}
+
+model CrmPlantillaCorreo {
+  id_plantilla   Int      @id @default(autoincrement())
+  nombre         String
+  asunto         String
+  cuerpo         String   @db.Text
+  activo         Boolean  @default(true)
+  creado_en      DateTime @default(now()) @db.Timestamptz
+  actualizado_en DateTime @default(now()) @updatedAt @db.Timestamptz
+
+  @@map("crm_plantilla_correo")
+  @@schema("crm")
 }
 
 model CrmSolicitudArquitectura {
