@@ -94,38 +94,95 @@ export class WhatsappService {
             },
         });
 
-        // AI intervention
+        // AI intervention - only if enabled for this lead
         try {
-            console.log(`[WhatsApp] Calling AiService for lead ${lead.id_lead}...`);
-            const aiResult = await this.aiService.chat(lead.id_lead, text, true);
-            
-            if (aiResult && aiResult.respuesta) {
-                // Remove internal AI markers before sending to actual user
-                let answerToSend = aiResult.respuesta;
-                const markerIdx = answerToSend.indexOf('<!--RENAV_PROPS:');
-                if (markerIdx !== -1) {
-                    answerToSend = answerToSend.slice(0, markerIdx).trimEnd();
-                }
+            if (lead.ia_activa) {
+                console.log(`[WhatsApp] Calling AiService for lead ${lead.id_lead}...`);
+                const aiResult = await this.aiService.chat(lead.id_lead, text, true);
+                
+                if (aiResult && aiResult.respuesta) {
+                    // Remove internal AI markers before sending to actual user
+                    let answerToSend = aiResult.respuesta;
+                    const markerIdx = answerToSend.indexOf('<!--RENAV_PROPS:');
+                    if (markerIdx !== -1) {
+                        answerToSend = answerToSend.slice(0, markerIdx).trimEnd();
+                    }
 
-                if (aiResult.mediaUrl) {
-                    await this.sender.sendMedia(fromPhone, aiResult.mediaUrl, answerToSend);
-                    console.log(`[WhatsApp] AI responded with Media to ${cleanPhone}`);
-                } else if (aiResult.botones && aiResult.botones.length > 0) {
-                    await this.sender.sendInteractiveButtons(fromPhone, answerToSend, aiResult.botones);
-                    console.log(`[WhatsApp] AI responded with Interactive Buttons to ${cleanPhone}`);
-                } else {
-                    await this.sender.sendMessage(fromPhone, answerToSend);
-                    console.log(`[WhatsApp] AI responded to ${cleanPhone}`);
-                }
+                    let resultMsg;
+                    if (aiResult.mediaUrl) {
+                        resultMsg = await this.sender.sendMedia(fromPhone, aiResult.mediaUrl, answerToSend);
+                        console.log(`[WhatsApp] AI responded with Media to ${cleanPhone}`);
+                    } else if (aiResult.botones && aiResult.botones.length > 0) {
+                        resultMsg = await this.sender.sendInteractiveButtons(fromPhone, answerToSend, aiResult.botones);
+                        console.log(`[WhatsApp] AI responded with Interactive Buttons to ${cleanPhone}`);
+                    } else {
+                        resultMsg = await this.sender.sendMessage(fromPhone, answerToSend);
+                        console.log(`[WhatsApp] AI responded to ${cleanPhone}`);
+                    }
 
-                // Notify frontend that the AI reply was stored
-                this.eventsService.emit({
-                    type: 'nuevo_mensaje',
-                    payload: { id_lead: lead.id_lead, es_ai: true },
-                });
+                    // Capture wamid and update message record for status tracking
+                    const wamid = resultMsg?.messages?.[0]?.id;
+                    if (wamid && aiResult.messageId) {
+                        await this.prisma.crmMensaje.update({
+                            where: { id_mensaje: aiResult.messageId },
+                            data: { whatsapp_msg_id: wamid },
+                        });
+                    }
+                }
+            } else {
+                console.log(`[WhatsApp] AI is PAUSED for lead ${lead.id_lead}. No auto-reply.`);
             }
         } catch (e) {
             console.error(`[WhatsApp] Error calling AI for lead ${lead.id_lead}:`, e);
+        }
+    }
+
+    /**
+     * Procesa una actualización de estado de WhatsApp (entregado, leído, etc.)
+     */
+    async processStatusUpdate(wamid: string, status: string) {
+        try {
+            // Buscamos el mensaje por su ID de WhatsApp
+            const mensaje = await this.prisma.crmMensaje.findUnique({
+                where: { whatsapp_msg_id: wamid },
+                select: { id_mensaje: true, id_lead: true, estatus_entrega: true },
+            });
+
+            if (!mensaje) {
+                // Puede ser un mensaje enviado fuera del CRM o un ID no registrado aún
+                return;
+            }
+
+            // Mapeo de estados de Meta a nuestro sistema
+            // meta: 'sent', 'delivered', 'read', 'failed'
+            const newStatus = status === 'SENT' ? 'ENVIADO' : 
+                             status === 'DELIVERED' ? 'ENTREGADO' : 
+                             status === 'READ' ? 'LEIDO' : 
+                             status === 'FAILED' ? 'FALLIDO' : status;
+
+            // Solo actualizar si el estado es "superior" o diferente
+            // (evitar volver de LEIDO a ENTREGADO si los webhooks llegan desordenados)
+            const statusOrder = { 'ENVIADO': 1, 'ENTREGADO': 2, 'LEIDO': 3, 'FALLIDO': 0 };
+            if (statusOrder[newStatus] > statusOrder[mensaje.estatus_entrega || 'ENVIADO']) {
+                await this.prisma.crmMensaje.update({
+                    where: { id_mensaje: mensaje.id_mensaje },
+                    data: { estatus_entrega: newStatus },
+                });
+
+                // Notificar al frontend vía SSE
+                this.eventsService.emit({
+                    type: 'mensaje_estatus_actualizado',
+                    payload: {
+                        id_lead: mensaje.id_lead,
+                        id_mensaje: mensaje.id_mensaje,
+                        estatus: newStatus,
+                    },
+                });
+                
+                console.log(`[WhatsApp] Status updated for msg ${wamid}: ${newStatus}`);
+            }
+        } catch (err) {
+            console.error(`[WhatsApp] Error processing status update for ${wamid}:`, err);
         }
     }
 }

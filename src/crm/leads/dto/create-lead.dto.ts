@@ -39,4 +39,8 @@ export class CreateLeadDto {
     @IsString()
     @IsOptional()
     notas_iniciales?: string;
+
+    @ApiProperty({ default: true })
+    @IsOptional()
+    ia_activa?: boolean;
 }

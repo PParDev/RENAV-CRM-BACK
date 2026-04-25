@@ -296,6 +296,7 @@ model CrmLead {
   etiquetas_ia          String[] @default([]) // Etiquetas automáticas (AI Tags)
   sentimiento           String?  // Ej. Positivo, Neutral, Indeciso, Molesto
   activo                Boolean  @default(true)
+  ia_activa             Boolean  @default(true)
   creado_en             DateTime @default(now()) @db.Timestamptz
   actualizado_en        DateTime @default(now()) @updatedAt @db.Timestamptz
 

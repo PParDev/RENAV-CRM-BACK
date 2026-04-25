@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { Subject, Observable } from 'rxjs';
 
 export interface CrmEvent {
-    type: 'nuevo_mensaje' | 'nuevo_lead' | 'lead_actualizado' | 'agente_requerido';
+    type: 'nuevo_mensaje' | 'nuevo_lead' | 'lead_actualizado' | 'agente_requerido' | 'mensaje_estatus_actualizado';
     payload: any;
 }
 

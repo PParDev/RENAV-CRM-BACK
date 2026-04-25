@@ -297,7 +297,7 @@ export class AiService implements OnModuleInit {
     }
 
     // ── Main entry point ─────────────────────────────────────────────────────
-    async chat(leadId: number, userMessage: string, esEntrante: boolean): Promise<{ respuesta: string, botones?: string[], mediaUrl?: string, mediaCaption?: string }> {
+    async chat(leadId: number, userMessage: string, esEntrante: boolean): Promise<{ respuesta: string, messageId: number, botones?: string[], mediaUrl?: string, mediaCaption?: string }> {
         const key = this.config.get<string>('OPENROUTER_KEY');
 
         // 1. Load lead context
@@ -430,7 +430,7 @@ ${fase}
 ═══════════════════════════════════════
 - Formato WhatsApp: *negritas* con un asterisco, _cursiva_ con guión bajo.
 - Máximo 3-4 oraciones por respuesta. Sé concisa pero cálida.
-- Español, tono profesional y cercano. Tutea al cliente.
+- Español, tono profesional and cercano. Tutea al cliente.
 - NUNCA inventes propiedades ni datos. Solo comparte lo que devuelve buscar_propiedades.
 - Cuando muestres propiedades, destaca: nombre del desarrollo, zona, tipo, precio y un dato diferenciador.`;
 
@@ -542,11 +542,41 @@ ${fase}
         }
 
         // 6. Save AI response to DB
-        await this.prisma.crmMensaje.create({
+        const msgRecord = await this.prisma.crmMensaje.create({
             data: { id_lead: leadId, es_entrante: false, canal: 'AI', texto: respuesta },
         });
 
-        return { respuesta, botones: botonesSalida, mediaUrl: mediaUrlSalida, mediaCaption: mediaCaptionSalida };
+        // Notify frontend: AI response ready
+        this.eventsService.emit({
+            type: 'nuevo_mensaje',
+            payload: {
+                id_lead: leadId,
+                id_mensaje: msgRecord.id_mensaje,
+                texto: respuesta,
+                es_entrante: false,
+                canal: 'AI',
+                creado_en: msgRecord.creado_en,
+                es_ai: true
+            },
+        });
+
+        // 7. Auto-transition: if the lead is still NUEVO, move it to EN PROCESO
+        //    (Note: Incoming message should have already done this, but we do it for robustness)
+        if (lead?.estado === 'NUEVO') {
+            await this.prisma.crmLead.update({
+                where: { id_lead: leadId },
+                data: { estado: 'EN PROCESO' },
+            });
+            this.eventsService.emit({ type: 'lead_actualizado', payload: { id_lead: leadId, estado: 'EN PROCESO' } });
+        }
+
+        return { 
+            respuesta, 
+            messageId: msgRecord.id_mensaje, 
+            botones: botonesSalida, 
+            mediaUrl: mediaUrlSalida, 
+            mediaCaption: mediaCaptionSalida 
+        };
     }
 
     // ── Tool: buscar propiedades ──────────────────────────────────────────────

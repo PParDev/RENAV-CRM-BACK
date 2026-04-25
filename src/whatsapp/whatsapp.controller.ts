@@ -34,21 +34,27 @@ export class WhatsappController {
     @HttpCode(HttpStatus.OK)
     async handleIncomingMessage(@Body() body: any) {
         // According to Meta documentation, always return 200 OK
-        if (body.object) {
-            if (
-                body.entry &&
-                body.entry[0].changes &&
-                body.entry[0].changes[0] &&
-                body.entry[0].changes[0].value.messages &&
-                body.entry[0].changes[0].value.messages[0]
-            ) {
-                const phoneNumber = body.entry[0].changes[0].value.messages[0].from;
-                const msgBody = body.entry[0].changes[0].value.messages[0].text?.body;
-                const contactName = body.entry[0].changes[0].value.contacts?.[0]?.profile?.name || 'Cliente de WhatsApp';
+        const value = body?.entry?.[0]?.changes?.[0]?.value;
+        if (!value) return 'no_value';
 
-                if (msgBody && phoneNumber) {
-                    await this.whatsappService.processMessage(phoneNumber, msgBody, contactName);
-                }
+        // 1. Mensajes entrantes
+        if (value.messages && value.messages[0]) {
+            const phoneNumber = value.messages[0].from;
+            const msgBody = value.messages[0].text?.body;
+            const contactName = value.contacts?.[0]?.profile?.name || 'Cliente de WhatsApp';
+
+            if (msgBody && phoneNumber) {
+                await this.whatsappService.processMessage(phoneNumber, msgBody, contactName);
+            }
+        }
+
+        // 2. Actualizaciones de estado (Enviado, Entregado, Leído)
+        if (value.statuses && value.statuses[0]) {
+            const statusObj = value.statuses[0];
+            const wamid = statusObj.id;
+            const status = statusObj.status; // 'sent', 'delivered', 'read'
+            if (wamid && status) {
+                await this.whatsappService.processStatusUpdate(wamid, status.toUpperCase());
             }
         }
 

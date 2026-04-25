@@ -130,7 +130,7 @@ export class WhatsappSenderService {
      * Busca el teléfono del contacto asociado al lead y envía el mensaje.
      * Si el contacto no tiene teléfono, omite el envío silenciosamente.
      */
-    async sendMessageToLead(leadId: number, text: string): Promise<void> {
+    async sendMessageToLead(leadId: number, text: string): Promise<string | null> {
         try {
             const lead = await this.prisma.crmLead.findUnique({
                 where: { id_lead: leadId },
@@ -139,19 +139,20 @@ export class WhatsappSenderService {
 
             if (!lead) {
                 this.logger.warn(`[WhatsApp] Lead ${leadId} no encontrado`);
-                return;
+                return null;
             }
 
             const telefono = lead.contacto?.telefono;
             if (!telefono) {
                 this.logger.warn(`[WhatsApp] Lead ${leadId} no tiene teléfono — envío omitido`);
-                return;
+                return null;
             }
 
-            await this.sendMessage(telefono, text);
+            const result = await this.sendMessage(telefono, text);
+            return result?.messages?.[0]?.id || null;
         } catch (err) {
             this.logger.error(`[WhatsApp] Error enviando al lead ${leadId}: ${err.message}`);
-            // No relanzamos — no queremos que un fallo de WA rompa el flujo principal
+            return null;
         }
     }
 }
