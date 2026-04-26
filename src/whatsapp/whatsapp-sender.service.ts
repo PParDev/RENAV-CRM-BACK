@@ -62,8 +62,14 @@ export class WhatsappSenderService {
         const url = `https://graph.facebook.com/v18.0/${phoneId}/messages`;
         
         // Determine type based on extension (simple assumption)
-        const isImage = mediaUrl.match(/\.(jpeg|jpg|gif|png|webp)$/i) != null;
-        const msgType = isImage ? 'image' : 'document';
+        let msgType = 'document';
+        if (mediaUrl.match(/\.(jpeg|jpg|gif|png|webp|bmp)$/i)) {
+            msgType = 'image';
+        } else if (mediaUrl.match(/\.(mp4|3gp|mov|avi)$/i)) {
+            msgType = 'video';
+        } else if (mediaUrl.match(/\.(mp3|ogg|wav|m4a)$/i)) {
+            msgType = 'audio';
+        }
         
         const payload: any = {
             messaging_product: 'whatsapp',
@@ -130,7 +136,7 @@ export class WhatsappSenderService {
      * Busca el teléfono del contacto asociado al lead y envía el mensaje.
      * Si el contacto no tiene teléfono, omite el envío silenciosamente.
      */
-    async sendMessageToLead(leadId: number, text: string): Promise<string | null> {
+    async sendMessageToLead(leadId: number, text: string, mediaUrl?: string): Promise<string | null> {
         try {
             const lead = await this.prisma.crmLead.findUnique({
                 where: { id_lead: leadId },
@@ -148,7 +154,10 @@ export class WhatsappSenderService {
                 return null;
             }
 
-            const result = await this.sendMessage(telefono, text);
+            const result = mediaUrl 
+                ? await this.sendMedia(telefono, mediaUrl, text)
+                : await this.sendMessage(telefono, text);
+
             return result?.messages?.[0]?.id || null;
         } catch (err) {
             this.logger.error(`[WhatsApp] Error enviando al lead ${leadId}: ${err.message}`);

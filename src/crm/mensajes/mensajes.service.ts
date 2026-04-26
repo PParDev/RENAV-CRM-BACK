@@ -12,8 +12,8 @@ export class MensajesService {
     async create(data: { id_lead?: number; id_usuario?: number; es_entrante: boolean; canal?: string; texto: string; media_url?: string }) {
         const msg = await this.prisma.crmMensaje.create({
             data: {
-                id_lead: data.id_lead,
-                id_usuario: data.id_usuario,
+                ...(data.id_lead   ? { lead:    { connect: { id_lead:    data.id_lead   } } } : {}),
+                ...(data.id_usuario ? { usuario: { connect: { id_usuario: data.id_usuario } } } : {}),
                 es_entrante: data.es_entrante,
                 canal: data.canal || 'WEB',
                 texto: data.texto,
@@ -23,7 +23,6 @@ export class MensajesService {
 
         // Auto-transition: if the lead is still NUEVO, move it to EN PROCESO
         // now that there is active conversation happening.
-<<<<<<< Updated upstream
         if (data.id_lead) {
             const lead = await this.prisma.crmLead.findUnique({ where: { id_lead: data.id_lead }, select: { estado: true } });
             if (lead?.estado === 'NUEVO') {
@@ -31,16 +30,8 @@ export class MensajesService {
                     where: { id_lead: data.id_lead },
                     data: { estado: 'EN PROCESO' },
                 });
+                this.eventsService.emit({ type: 'lead_actualizado', payload: { id_lead: data.id_lead, estado: 'EN PROCESO' } });
             }
-=======
-        const lead = await this.prisma.crmLead.findUnique({ where: { id_lead: data.id_lead }, select: { estado: true } });
-        if (lead?.estado === 'NUEVO') {
-            await this.prisma.crmLead.update({
-                where: { id_lead: data.id_lead },
-                data: { estado: 'EN PROCESO' },
-            });
-            this.eventsService.emit({ type: 'lead_actualizado', payload: { id_lead: data.id_lead, estado: 'EN PROCESO' } });
->>>>>>> Stashed changes
         }
 
         // Notify frontend: new message ready

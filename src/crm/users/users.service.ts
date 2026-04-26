@@ -39,6 +39,9 @@ export class UsersService {
                 rol: rest.role,
                 telefono: rest.telefono,
                 activo: rest.activo,
+                whatsapp: rest.whatsapp,
+                facebook: rest.facebook,
+                instagram: rest.instagram,
                 password_hash,
             },
         });
@@ -76,14 +79,17 @@ export class UsersService {
 
     // Actualiza la información de un usuario existente
     async update(id: string, updateUserDto: UpdateUserDto): Promise<UserWithoutPassword> {
-        const { password, nombre, role, email, telefono, activo } = updateUserDto;
+        const { password, nombre, role, email, telefono, activo, whatsapp, facebook, instagram } = updateUserDto;
 
         const updateData: any = {};
         if (nombre) updateData.nombre = nombre;
         if (role) updateData.rol = role;
         if (email) updateData.email = email;
-        if (telefono) updateData.telefono = telefono;
+        if (telefono !== undefined) updateData.telefono = telefono;
         if (activo !== undefined) updateData.activo = activo;
+        if (whatsapp !== undefined) updateData.whatsapp = whatsapp;
+        if (facebook !== undefined) updateData.facebook = facebook;
+        if (instagram !== undefined) updateData.instagram = instagram;
 
         if (password) {
             const salt = await bcrypt.genSalt();

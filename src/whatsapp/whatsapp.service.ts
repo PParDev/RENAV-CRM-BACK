@@ -5,6 +5,9 @@ import { LeadPriority } from '../crm/leads/dto/create-lead.dto';
 import { AiService } from '../ai/ai.service';
 import { EventsService } from '../events/events.service';
 import { WhatsappSenderService } from './whatsapp-sender.service';
+import { ConfigService } from '@nestjs/config';
+import { UploadService } from '../upload/upload.service';
+import { Readable } from 'stream';
 
 @Injectable()
 export class WhatsappService {
@@ -14,9 +17,51 @@ export class WhatsappService {
         private readonly aiService: AiService,
         private readonly eventsService: EventsService,
         private readonly sender: WhatsappSenderService,
+        private readonly configService: ConfigService,
+        private readonly uploadService: UploadService,
     ) { }
 
-    async processMessage(fromPhone: string, text: string, contactName: string) {
+    private async downloadMediaFromMeta(mediaId: string): Promise<string | null> {
+        try {
+            const token = this.configService.get<string>('WHATSAPP_TOKEN');
+            if (!token) return null;
+
+            // 1. Obtener la URL interna usando el Media ID
+            const res = await fetch(`https://graph.facebook.com/v18.0/${mediaId}`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            const data = await res.json();
+            if (!data.url) return null;
+
+            // 2. Descargar el archivo binario desde la URL interna
+            const bufferRes = await fetch(data.url, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            if (!bufferRes.ok) return null;
+            
+            const arrayBuffer = await bufferRes.arrayBuffer();
+            const buffer = Buffer.from(arrayBuffer);
+            
+            // 3. Crear un objeto tipo Express.Multer.File falso para pasarlo al uploadService
+            const file: any = {
+                fieldname: 'file',
+                originalname: `wapp_media_${mediaId}`,
+                encoding: '7bit',
+                mimetype: bufferRes.headers.get('content-type') || 'application/octet-stream',
+                buffer,
+                size: buffer.length
+            };
+
+            // 4. Utilizar nuestro servicio de subida (que guarda en memoria, S3, o localmente)
+            const uploadedUrl = await this.uploadService.uploadFile(file, 'inbox-media');
+            return uploadedUrl;
+        } catch (e) {
+            console.error(`[WhatsApp] Download Media Error:`, e);
+            return null;
+        }
+    }
+
+    async processMessage(fromPhone: string, text: string, contactName: string, mediaId?: string) {
         // Clean phone (WhatsApp usually sends with area code e.g., 521...)
         let cleanPhone = fromPhone.replace(/\D/g, '');
         if (cleanPhone.startsWith('52') && cleanPhone.length === 12) {
@@ -59,13 +104,21 @@ export class WhatsappService {
             this.eventsService.emit({ type: 'nuevo_lead', payload: { id_lead: lead.id_lead } });
         }
 
-        // 3. Insert Message
+        // 3. Download media if attached
+        let finalMediaUrl: string | undefined = undefined;
+        if (mediaId && mediaId !== 'null' && mediaId !== undefined) {
+            const _media = await this.downloadMediaFromMeta(mediaId);
+            finalMediaUrl = _media ? _media : undefined;
+        }
+
+        // 4. Insert Message
         const mensaje = await this.prisma.crmMensaje.create({
             data: {
                 id_lead: lead.id_lead,
                 es_entrante: true,
                 canal: 'WHATSAPP',
                 texto: text,
+                media_url: finalMediaUrl,
             },
         });
 
@@ -90,6 +143,7 @@ export class WhatsappService {
                 texto: text,
                 es_entrante: true,
                 canal: 'WHATSAPP',
+                media_url: finalMediaUrl,
                 creado_en: mensaje.creado_en,
             },
         });
@@ -160,10 +214,14 @@ export class WhatsappService {
                              status === 'READ' ? 'LEIDO' : 
                              status === 'FAILED' ? 'FALLIDO' : status;
 
-            // Solo actualizar si el estado es "superior" o diferente
-            // (evitar volver de LEIDO a ENTREGADO si los webhooks llegan desordenados)
-            const statusOrder = { 'ENVIADO': 1, 'ENTREGADO': 2, 'LEIDO': 3, 'FALLIDO': 0 };
-            if (statusOrder[newStatus] > statusOrder[mensaje.estatus_entrega || 'ENVIADO']) {
+            // Log the status so we can see what's happening
+            console.log(`[WhatsApp] Raw Status received for ${wamid}: ${status} -> ${newStatus}`);
+
+            const statusOrder = { 'FALLIDO': 6, 'ENVIADO': 1, 'ENTREGADO': 2, 'LEIDO': 3 };
+            const currentScore = statusOrder[mensaje.estatus_entrega] || 0;
+            const newScore = statusOrder[newStatus] || 0;
+
+            if (newScore > currentScore || newStatus === 'FALLIDO') {
                 await this.prisma.crmMensaje.update({
                     where: { id_mensaje: mensaje.id_mensaje },
                     data: { estatus_entrega: newStatus },

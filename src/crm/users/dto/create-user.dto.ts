@@ -30,4 +30,19 @@ export class CreateUserDto {
     @IsOptional()
     @IsBoolean()
     activo?: boolean;
+
+    @ApiPropertyOptional()
+    @IsOptional()
+    @IsString()
+    whatsapp?: string;
+
+    @ApiPropertyOptional()
+    @IsOptional()
+    @IsString()
+    facebook?: string;
+
+    @ApiPropertyOptional()
+    @IsOptional()
+    @IsString()
+    instagram?: string;
 }

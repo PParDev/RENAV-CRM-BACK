@@ -21,6 +21,22 @@ class BulkStatusDto {
     estado: string;
 }
 
+class CreateExpedienteDto {
+    @IsString()
+    nombre: string;
+
+    @IsString()
+    // @IsOptional() removed because class-validator needs importing IsOptional
+    tipo_archivo?: string;
+
+    @IsString()
+    url: string;
+
+    @IsNumber()
+    // @IsOptional()
+    tamanio_bytes?: number;
+}
+
 class BulkAssignDto {
     @IsArray()
     @IsNumber({}, { each: true })
@@ -101,5 +117,26 @@ export class LeadsController {
     @Delete(':id')
     remove(@Param('id', ParseIntPipe) id: number) {
         return this.leadsService.remove(id);
+    }
+
+    // --- Expedientes ---
+    @Get('global/expedientes')
+    getAllExpedientes() {
+        return this.leadsService.getAllExpedientes();
+    }
+
+    @Get(':id/expediente')
+    getExpediente(@Param('id', ParseIntPipe) id: number) {
+        return this.leadsService.getExpediente(id);
+    }
+
+    @Post(':id/expediente')
+    addExpedienteDocument(@Param('id', ParseIntPipe) id: number, @Body() dto: CreateExpedienteDto) {
+        return this.leadsService.addExpedienteDocument(id, dto);
+    }
+
+    @Delete(':id/expediente/:docId')
+    removeExpedienteDocument(@Param('id', ParseIntPipe) id: number, @Param('docId', ParseIntPipe) docId: number) {
+        return this.leadsService.removeExpedienteDocument(docId);
     }
 }

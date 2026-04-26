@@ -404,4 +404,51 @@ export class LeadsService {
             throw error;
         }
     }
+
+    // --- Módulo Expediente ---
+    async getAllExpedientes() {
+        return this.prisma.crmExpedienteDocumento.findMany({
+            include: {
+                lead: {
+                    select: {
+                        id_lead: true,
+                        contacto: { select: { nombre: true, telefono: true } },
+                    }
+                }
+            },
+            orderBy: { creado_en: 'desc' },
+        });
+    }
+
+    async getExpediente(idLead: number) {
+        return this.prisma.crmExpedienteDocumento.findMany({
+            where: { id_lead: idLead },
+            orderBy: { creado_en: 'desc' },
+        });
+    }
+
+    async addExpedienteDocument(idLead: number, data: { nombre: string; tipo_archivo?: string; url: string; tamanio_bytes?: number }) {
+        const lead = await this.prisma.crmLead.findUnique({ where: { id_lead: idLead } });
+        if (!lead) throw new NotFoundException(`Lead ${idLead} not found`);
+
+        return this.prisma.crmExpedienteDocumento.create({
+            data: {
+                id_lead: idLead,
+                nombre: data.nombre,
+                tipo_archivo: data.tipo_archivo,
+                url: data.url,
+                tamanio_bytes: data.tamanio_bytes,
+            },
+        });
+    }
+
+    async removeExpedienteDocument(idDoc: number) {
+        try {
+            return await this.prisma.crmExpedienteDocumento.delete({
+                where: { id_documento: idDoc },
+            });
+        } catch (e) {
+            throw new NotFoundException(`Documento ${idDoc} no encontrado`);
+        }
+    }
 }

@@ -92,4 +92,14 @@ export class CreateUnitDto {
     @IsNumber()
     @IsOptional()
     porcentaje_comision?: number;
+
+    @ApiProperty({ required: false })
+    @IsNumber()
+    @IsOptional()
+    recamaras?: number;
+
+    @ApiProperty({ required: false })
+    @IsNumber()
+    @IsOptional()
+    banos?: number;
 }

@@ -269,6 +269,9 @@ model CrmUsuario {
   nombre        String
   email         String   @unique
   telefono      String?
+  whatsapp      String?
+  facebook      String?
+  instagram     String?
   rol           String
   password_hash String?
   activo        Boolean  @default(true)
@@ -311,6 +314,7 @@ model CrmLead {
   solicitudes      CrmSolicitudServicio[]
   apartados        InvApartado[]
   ventas           InvVenta[]
+  documentos       CrmExpedienteDocumento[]
 
   @@map("crm_lead")
   @@schema("crm")
@@ -386,6 +390,22 @@ model CrmActividad {
   @@schema("crm")
   @@index([id_lead])
   @@index([programada_para])
+}
+
+model CrmExpedienteDocumento {
+  id_documento  Int      @id @default(autoincrement())
+  id_lead       Int
+  nombre        String
+  tipo_archivo  String?
+  url           String
+  tamanio_bytes Int?
+  creado_en     DateTime @default(now()) @db.Timestamptz
+
+  lead          CrmLead  @relation(fields: [id_lead], references: [id_lead], onDelete: Cascade)
+
+  @@map("crm_expediente_documento")
+  @@schema("crm")
+  @@index([id_lead])
 }
 
 model CrmMensaje {
@@ -661,6 +681,8 @@ model InvUnidad {
   imagen_url            String?
   tipo_proyecto         String?
   nivel_piso            String?
+  recamaras             Int?
+  banos                 Decimal?  @db.Decimal(4, 1)
   porcentaje_comision   Decimal?  @db.Decimal(8, 4)
   activo                Boolean   @default(true)
   deletedAt             DateTime? @db.Timestamptz

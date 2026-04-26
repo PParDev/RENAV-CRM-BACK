@@ -39,22 +39,46 @@ export class WhatsappController {
 
         // 1. Mensajes entrantes
         if (value.messages && value.messages[0]) {
-            const phoneNumber = value.messages[0].from;
-            const msgBody = value.messages[0].text?.body;
+            const message = value.messages[0];
+            const phoneNumber = message.from;
             const contactName = value.contacts?.[0]?.profile?.name || 'Cliente de WhatsApp';
+            
+            let msgBody = message.text?.body;
+            let mediaId = undefined;
 
-            if (msgBody && phoneNumber) {
-                await this.whatsappService.processMessage(phoneNumber, msgBody, contactName);
+            if (message.type === 'image') {
+                mediaId = message.image?.id;
+                msgBody = msgBody || message.image?.caption || '📸 Imagen';
+            } else if (message.type === 'document') {
+                mediaId = message.document?.id;
+                msgBody = msgBody || message.document?.caption || message.document?.filename || '📎 Documento';
+            } else if (message.type === 'video') {
+                mediaId = message.video?.id;
+                msgBody = msgBody || message.video?.caption || '🎥 Video';
+            } else if (message.type === 'audio') {
+                mediaId = message.audio?.id;
+                msgBody = msgBody || '🎵 Audio';
+            } else if (message.type === 'sticker') {
+                mediaId = message.sticker?.id;
+                msgBody = msgBody || '👾 Sticker';
+            } else if (message.type === 'voice') {
+                mediaId = message.voice?.id;
+                msgBody = msgBody || '🎤 Nota de Voz';
+            }
+
+            if ((msgBody !== undefined || mediaId) && phoneNumber) {
+                await this.whatsappService.processMessage(phoneNumber, msgBody || '', contactName, mediaId);
             }
         }
 
         // 2. Actualizaciones de estado (Enviado, Entregado, Leído)
         if (value.statuses && value.statuses[0]) {
-            const statusObj = value.statuses[0];
-            const wamid = statusObj.id;
-            const status = statusObj.status; // 'sent', 'delivered', 'read'
-            if (wamid && status) {
-                await this.whatsappService.processStatusUpdate(wamid, status.toUpperCase());
+            const statuses = value.statuses;
+            for (const status of statuses) {
+                if (status.status === 'failed' || status.errors) {
+                    console.error(`[WhatsApp] Webhook Failed Status for ${status.id}:`, JSON.stringify(status.errors));
+                }
+                await this.whatsappService.processStatusUpdate(status.id, status.status.toUpperCase());
             }
         }
 

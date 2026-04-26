@@ -2,6 +2,7 @@ import { Injectable, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../database/prisma.service';
 import { EventsService } from '../events/events.service';
+import { AiConfigService } from './ai-config.service';
 
 const OPENROUTER_URL = 'https://openrouter.ai/api/v1/chat/completions';
 const MODEL = 'openai/gpt-4o-mini';
@@ -21,6 +22,7 @@ export class AiService implements OnModuleInit {
         private readonly prisma: PrismaService,
         private readonly config: ConfigService,
         private readonly eventsService: EventsService,
+        private readonly aiConfigService: AiConfigService,
     ) {}
 
     async onModuleInit() {
@@ -285,11 +287,56 @@ export class AiService implements OnModuleInit {
                         type: 'object',
                         properties: {
                             texto: { type: 'string', description: 'El texto principal que acompaña a los botones' },
-                            opciones: { 
-                                type: 'array', items: { type: 'string' }, description: 'Máximo 3 opciones cortas (ej. "Agendar Visita", "Hablemos de precios")' 
+                            opciones: {
+                                type: 'array', items: { type: 'string' }, description: 'Máximo 3 opciones cortas (ej. "Agendar Visita", "Hablemos de precios")'
                             }
                         },
                         required: ['texto', 'opciones'],
+                    },
+                },
+            },
+            {
+                type: 'function',
+                function: {
+                    name: 'actualizar_perfil_financiero',
+                    description: 'Guarda la situación financiera del cliente: forma de pago, crédito disponible, enganche, urgencia y propósito de compra. Llama cuando el cliente mencione cómo piensa pagar, si tiene crédito, o con qué urgencia quiere comprar.',
+                    parameters: {
+                        type: 'object',
+                        properties: {
+                            proposito: {
+                                type: 'string',
+                                enum: ['PARA_VIVIR', 'INVERSION_RENTA', 'INVERSION_PLUSVALIA', 'VACACIONAL', 'OTRO'],
+                                description: '¿Para qué quiere la propiedad? PARA_VIVIR=hogar familiar, INVERSION_RENTA=rentarla, INVERSION_PLUSVALIA=venderla con ganancia, VACACIONAL=uso recreativo.',
+                            },
+                            metodo_financiamiento: {
+                                type: 'string',
+                                enum: ['CONTADO', 'CREDITO_HIPOTECARIO', 'INFONAVIT', 'FOVISSSTE', 'CREDITO_DESARROLLADORA', 'MIXTO'],
+                                description: 'Forma en que el cliente planea pagar.',
+                            },
+                            monto_credito: {
+                                type: 'number',
+                                description: 'Monto de crédito pre-aprobado o disponible (en pesos MXN).',
+                            },
+                            tiene_enganche: {
+                                type: 'boolean',
+                                description: '¿El cliente ya cuenta con enganche disponible?',
+                            },
+                            porcentaje_enganche: {
+                                type: 'number',
+                                description: 'Porcentaje del precio total que puede dar de enganche (ej. 20 = 20%).',
+                            },
+                            urgencia: {
+                                type: 'string',
+                                enum: ['INMEDIATO', 'UN_MES', 'TRES_MESES', 'SEIS_MESES', 'UN_ANIO', 'MAS_DE_UN_ANIO'],
+                                description: '¿Para cuándo quiere adquirir la propiedad?',
+                            },
+                            segmento_cliente: {
+                                type: 'string',
+                                enum: ['PRIMERA_VIVIENDA', 'SEGUNDA_VIVIENDA', 'INVERSIONISTA', 'EMPRESARIAL', 'EXTRANJERO'],
+                                description: 'Segmento al que pertenece el cliente.',
+                            },
+                        },
+                        required: [],
                     },
                 },
             },
@@ -338,8 +385,11 @@ export class AiService implements OnModuleInit {
             ? `\n*MEMORIA DEL CLIENTE (de conversaciones anteriores):*\n${lead.contexto_ia}\n`
             : '';
 
+        // ── Load AI config ────────────────────────────────────────────────
+        const aiCfg = this.aiConfigService.getConfig();
+
         // ── Dynamic profiling checklist ──────────────────────────────────
-        const checklist = {
+        const checklist: Record<string, string> = {
             nombre: lead?.contacto?.nombre && lead.contacto.nombre !== 'cliente' ? `✅ ${lead.contacto.nombre}` : '❌ Nombre',
             telefono: lead?.contacto?.telefono ? '✅ Teléfono' : '❌ Teléfono',
             correo: lead?.contacto?.correo ? '✅ Correo' : '❌ Correo',
@@ -349,9 +399,20 @@ export class AiService implements OnModuleInit {
             presupuesto: sol?.presupuesto_max || sol?.presupuesto_min ? `✅ $${sol?.presupuesto_min || '?'}-$${sol?.presupuesto_max || '?'}` : '❌ Presupuesto',
             recamaras: br?.recamaras ? `✅ ${br.recamaras} recámaras` : '❌ Recámaras',
             m2: br?.m2_construidos_requeridos ? `✅ ${br.m2_construidos_requeridos}m²` : '❌ M² deseados',
-            motivacion: (br as any)?.motivacion ? `✅ ${(br as any).motivacion}` : '❌ Motivación de compra (¿por qué busca?, ¿para vivir/inversión?)',
-            temporalidad: (br as any)?.temporalidad ? `✅ ${(br as any).temporalidad}` : '❌ Temporalidad (¿cuándo quiere comprar/mudarse?)',
+            motivacion: (br as any)?.motivacion ? `✅ ${(br as any).motivacion}` : '❌ Motivación de compra (¿para vivir/invertir?)',
+            temporalidad: (br as any)?.temporalidad ? `✅ ${(br as any).temporalidad}` : '❌ Temporalidad (¿cuándo quiere comprar?)',
         };
+
+        if (aiCfg.preguntar_financiamiento) {
+            checklist['financiamiento'] = (br as any)?.metodo_financiamiento
+                ? `✅ ${(br as any).metodo_financiamiento}`
+                : '❌ Forma de pago (contado, crédito, Infonavit…)';
+        }
+        if (aiCfg.preguntar_capacidad_compra) {
+            checklist['capacidad_compra'] = sol?.presupuesto_max
+                ? `✅ Presupuesto definido`
+                : '❌ Capacidad de compra (¿tiene crédito pre-aprobado?)';
+        }
 
         // Count gathered vs missing
         const gathered = Object.values(checklist).filter(v => v.startsWith('✅')).length;
@@ -377,7 +438,42 @@ export class AiService implements OnModuleInit {
         else if (gathered <= 8) temperatura = '🟠 CALIENTE — Perfil sólido, necesita propuesta';
         else temperatura = '🔴 MUY CALIENTE — Listo para visita/cierre';
 
-        const systemPrompt = `Eres *Maya*, asesora virtual de RENAV Real Estate Group. Eres experta en bienes raíces en la zona de Colima/Manzanillo. Tu personalidad: profesional, cálida, empática, y directa. Nunca suenas robótica ni genérica.
+        // ── Build system prompt using AI config ──────────────────────────
+        const tonos: Record<string, string> = {
+            formal: 'formal y profesional. Usa "usted". No tutees.',
+            amigable: 'cálido, profesional y empático. Tutea al cliente (tú).',
+            casual: 'casual, cercano y directo. Tutea al cliente. Puedes ser más informal.',
+        };
+        const tonoDesc = tonos[aiCfg.tono] || tonos['amigable'];
+        const maxOraciones = aiCfg.max_oraciones || 3;
+
+        const serviciosActivos: string[] = [];
+        if (aiCfg.servicios_activos.bienes_raices) serviciosActivos.push('Bienes Raíces (venta y renta de propiedades)');
+        if (aiCfg.servicios_activos.arquitectura) serviciosActivos.push('Arquitectura y Diseño (proyectos residenciales y comerciales)');
+        if (aiCfg.servicios_activos.construccion) serviciosActivos.push('Construcción (obra nueva, remodelación)');
+        if (aiCfg.servicios_activos.avaluo) serviciosActivos.push('Avalúo (valuación de inmuebles)');
+
+        const frasesProhibidasStr = aiCfg.frases_prohibidas.length
+            ? `\nFRASES PROHIBIDAS (NO USES NUNCA):\n${aiCfg.frases_prohibidas.map(f => `- "${f}"`).join('\n')}`
+            : '';
+        const frasesObligatoriasStr = aiCfg.frases_obligatorias.length
+            ? `\nCONCEPTOS QUE DEBES INCORPORAR:\n${aiCfg.frases_obligatorias.map(f => `- ${f}`).join('\n')}`
+            : '';
+        const instruccionesEstilo = aiCfg.instrucciones_estilo
+            ? `\nINSTRUCCIONES DE ESTILO Y TONO:\n${aiCfg.instrucciones_estilo}`
+            : '';
+
+        const instruccionesPersonalizadas = aiCfg.instrucciones_personalizadas
+            ? `\n═══════════════════════════════════════\n📌 INSTRUCCIONES PERSONALIZADAS\n═══════════════════════════════════════\n${aiCfg.instrucciones_personalizadas}`
+            : '';
+
+        // Umbral para proponer cita automáticamente
+        const debeProponerCita = aiCfg.proponer_cita_automatica && gathered >= (aiCfg.umbral_cita || 7);
+        const sugerenciaCita = debeProponerCita
+            ? '\n⚡ ACCIÓN PRIORITARIA: Ya tienes suficiente perfil del cliente. PROPÓN una visita o cita concreta antes de terminar este mensaje. Usa agendar_cita si acepta.'
+            : '';
+
+        const systemPrompt = `Eres *${aiCfg.nombre_asistente}*, asesora virtual de ${aiCfg.empresa}. Eres experta en ${aiCfg.zona_operacion}. Tu tono es ${tonoDesc} Nunca suenas robótica ni genérica.
 
 ═══════════════════════════════════════
 📋 DATOS DEL LEAD
@@ -385,12 +481,22 @@ export class AiService implements OnModuleInit {
 - Nombre: ${lead?.contacto?.nombre || 'No identificado'}
 - Estado CRM: ${lead?.estado || 'NUEVO'} | Prioridad: ${lead?.prioridad || 'MEDIA'}
 - Temperatura: ${temperatura}
-- Perfil registrado: ${perfil}
+- Perfil: ${perfil}
 ${contextoCliente}
 ═══════════════════════════════════════
-📊 CHECKLIST DE PERFILAMIENTO (${gathered}/${total})
+📊 PERFILAMIENTO (${gathered}/${total})
 ═══════════════════════════════════════
 ${checklistStr}
+${sugerenciaCita}
+
+═══════════════════════════════════════
+🏢 SERVICIOS RENAV DISPONIBLES
+═══════════════════════════════════════
+${serviciosActivos.map(s => `• ${s}`).join('\n')}
+- NO te limites a propiedades. Si el cliente menciona construcción, diseño o necesita valuación, ofrece el servicio correspondiente.
+- Si el cliente dice "quiero construir" → ofrece Construcción/Arquitectura.
+- Si el cliente dice "quiero invertir en terreno" → ofrece Bienes Raíces + Arquitectura.
+- Si pregunta cuánto vale su propiedad → ofrece Avalúo.
 
 ═══════════════════════════════════════
 🎯 FASE ACTUAL
@@ -398,41 +504,39 @@ ${checklistStr}
 ${fase}
 
 ═══════════════════════════════════════
-🧠 ESTRATEGIA CONVERSACIONAL
+🧠 ESTRATEGIA
 ═══════════════════════════════════════
-1. *Extracción natural*: NUNCA hagas listas de preguntas ni interrogatorios. Extrae información de forma conversacional. En vez de "¿Cuál es tu presupuesto?", di algo como "Para darte las mejores opciones, ¿más o menos en qué rango de inversión estás pensando?"
-2. *Máximo 1-2 preguntas por mensaje*: Intercala con valor (dato del mercado, observación, validación de lo que dijo el cliente).
-3. *Escucha activa*: Siempre refleja lo que el cliente dijo antes de preguntar algo nuevo. Ejemplo: "Entiendo, una casa en Manzanillo para tu familia suena increíble. ¿Y más o menos cuántas recámaras necesitarían?"
-4. *Manejo de objeciones*: Si el cliente duda, empatiza primero, luego reencuadra. Si dice "es muy caro", no bajes precio — pregunta qué valor espera y busca alternativas.
-5. *Urgencia natural*: Si hay propiedades que coinciden con su perfil, menciona disponibilidad ("Hay pocas unidades en esa zona, te las comparto para que las veas").
-6. *Transición a agente humano*: Cuando el cliente quiera visitar, negociar precio, o hacer una oferta formal, sugiere conectar con un asesor humano de RENAV.
+1. Extrae información conversacionalmente. NUNCA hagas lista de preguntas.
+2. Máximo 1 pregunta por mensaje. Intercala con valor real.
+3. Refleja siempre lo que el cliente dijo antes de preguntar.
+4. Si menciona presupuesto/crédito/enganche → llama actualizar_perfil_financiero.
+5. Pregunta propósito si no lo tienes: "¿Es para vivir ahí o como inversión?"
+6. Si el cliente duda por precio → empatiza primero, luego muestra alternativas o formas de financiamiento.
+7. Cuando quiera negociar o visitar → solicitar_agente_humano inmediatamente.
 
 ═══════════════════════════════════════
-🔧 REGLAS DE HERRAMIENTAS (OBLIGATORIAS)
+🔧 HERRAMIENTAS (REGLAS ESTRICTAS)
 ═══════════════════════════════════════
-- *actualizar_perfil_inmobiliario*: Llama INMEDIATAMENTE cuando el cliente mencione tipo de inmueble, zona, presupuesto, recámaras o m². Convierte: "4 millones" → 4000000, "500 mil" → 500000.
-- *actualizar_lead*: Llama cuando detectes cambio en interés o intención. Criterios:
-  • BAJA: curiosidad, sin datos concretos
-  • MEDIA: interés real pero sin urgencia ni presupuesto definido
-  • ALTA: presupuesto + zona + tipo claros
-  • URGENTE: quiere visitar, hacer oferta o comprar ya
-- *buscar_propiedades*: Llama cuando tengas al menos tipo + (zona O presupuesto). Muestra máximo 3 opciones destacadas.
-- *agendar_cita*: Llama cuando el cliente quiera ver propiedades o reunirse.
-- *clasificar_cliente*: Llama cuando tengas suficiente información para determinar la temperatura del lead. Siempre incluye las 'etiquetas' y el 'sentimiento' actual del lead.
-- *registrar_objecion*: Llama cuando el cliente exprese una duda, barrera o resistencia (precio alto, indecisión, mala experiencia previa, etc.).
-- *solicitar_agente_humano*: Llama cuando el cliente quiera negociar precio, hacer una oferta, visitar una propiedad específica, o cuando necesite atención especializada que supere tu capacidad. Siempre di al cliente que un asesor lo contactará pronto.
-- *crear_nota*: Llama con datos clave descubiertos que el agente humano debe saber.
-- *actualizar_contexto*: Llama al final de CADA respuesta con un resumen acumulativo y mejorado de todo lo que sabes del cliente. Este es tu "cuaderno de notas" para no olvidar nada entre conversaciones.
-- NUNCA digas "voy a registrar" o "voy a guardar" — simplemente hazlo silenciosamente.
+- *actualizar_perfil_inmobiliario*: Al mencionar tipo, zona, presupuesto, recámaras o m². Convierte: "4 millones"→4000000.
+- *actualizar_perfil_financiero*: Al mencionar cómo pagar, crédito, enganche, urgencia o propósito.
+- *actualizar_lead*: BAJA=curiosidad, MEDIA=interés sin urgencia, ALTA=perfil claro, URGENTE=quiere visitar/comprar ya.
+- *buscar_propiedades*: Con tipo + (zona O presupuesto). Máximo 3 opciones.
+- *agendar_cita*: Cuando el cliente acepte reunirse o visitar.
+- *clasificar_cliente*: Con temperatura, señales, sentimiento y etiquetas.
+- *registrar_objecion*: Ante dudas o resistencias.
+- *solicitar_agente_humano*: Para negociar precio, oferta formal o visita específica.
+- *crear_nota*: Datos clave que el agente humano debe saber.
+- *actualizar_contexto*: AL FINAL DE CADA RESPUESTA, siempre.
+- NUNCA menciones que vas a guardar o registrar algo.
 
 ═══════════════════════════════════════
-✍️ FORMATO
+✍️ FORMATO${aiCfg.control_lenguaje_activo ? ' (RESTRICCIONES APLICADAS)' : ''}
 ═══════════════════════════════════════
-- Formato WhatsApp: *negritas* con un asterisco, _cursiva_ con guión bajo.
-- Máximo 3-4 oraciones por respuesta. Sé concisa pero cálida.
-- Español, tono profesional and cercano. Tutea al cliente.
-- NUNCA inventes propiedades ni datos. Solo comparte lo que devuelve buscar_propiedades.
-- Cuando muestres propiedades, destaca: nombre del desarrollo, zona, tipo, precio y un dato diferenciador.`;
+- MÁXIMO *${maxOraciones} oraciones* por respuesta. Respuestas cortas, directas y de valor.
+- ${aiCfg.formato_whatsapp ? 'Usa *negritas* y _cursiva_ estilo WhatsApp.' : 'Sin formato especial.'}
+- ${aiCfg.emojis_permitidos ? 'Puedes usar emojis con moderación.' : 'NO uses emojis.'}
+- Español puro. NUNCA inventes propiedades o datos.
+- Propiedades: destaca desarrollo, zona, tipo, precio y un dato diferenciador.${frasesProhibidasStr}${frasesObligatoriasStr}${instruccionesEstilo}${instruccionesPersonalizadas}`;
 
         // 4. Build message history (last 20, already ordered chronologically)
         const historial = mensajes.map((m) => ({
@@ -524,6 +628,9 @@ ${fase}
                             botonesSalida = args.opciones;
                             result = { ok: true, info: `Botones listos para adjuntar: [${args.opciones.join(', ')}]. Usa un mensaje conciso de texto para acompañarlos.` };
                             break;
+                        case 'actualizar_perfil_financiero':
+                            result = await this.actualizarPerfilFinanciero(leadId, args);
+                            break;
                         default:
                             result = { error: 'Herramienta desconocida' };
                     }
@@ -541,9 +648,15 @@ ${fase}
             break;
         }
 
-        // 6. Save AI response to DB
+        // 6. Save AI response to DB (include media_url if AI sent an image)
         const msgRecord = await this.prisma.crmMensaje.create({
-            data: { id_lead: leadId, es_entrante: false, canal: 'AI', texto: respuesta },
+            data: {
+                id_lead: leadId,
+                es_entrante: false,
+                canal: 'AI',
+                texto: respuesta,
+                ...(mediaUrlSalida ? { media_url: mediaUrlSalida } : {}),
+            },
         });
 
         // Notify frontend: AI response ready
@@ -556,7 +669,8 @@ ${fase}
                 es_entrante: false,
                 canal: 'AI',
                 creado_en: msgRecord.creado_en,
-                es_ai: true
+                es_ai: true,
+                ...(mediaUrlSalida ? { media_url: mediaUrlSalida } : {}),
             },
         });
 
@@ -761,12 +875,18 @@ ${fase}
         const [lead] = await Promise.all([
             this.prisma.crmLead.findUnique({
                 where: { id_lead: leadId },
-                select: { contacto: { select: { nombre: true } } },
+                select: {
+                    contacto: { select: { nombre: true } },
+                    usuario_asignado: {
+                        select: { nombre: true, telefono: true, whatsapp: true, facebook: true, instagram: true },
+                    },
+                },
             }),
             this.prisma.crmLead.update({ where: { id_lead: leadId }, data }),
         ]);
 
-        const nota = `🚨 REQUIERE AGENTE HUMANO\n${args.motivo}${args.urgente ? '\n⏰ URGENTE — requiere atención en menos de 24h' : ''}`;
+        const agente = lead?.usuario_asignado;
+        const nota = `🚨 REQUIERE AGENTE HUMANO\n${args.motivo}${args.urgente ? '\n⏰ URGENTE — requiere atención en menos de 24h' : ''}${agente ? `\n👤 Agente: ${agente.nombre}${agente.telefono ? ` | 📞 ${agente.telefono}` : ''}${agente.whatsapp ? ` | 💬 ${agente.whatsapp}` : ''}` : ''}`;
         await this.prisma.crmActividad.create({
             data: { id_lead: leadId, tipo: 'NOTE', descripcion: nota },
         });
@@ -779,6 +899,13 @@ ${fase}
                 contacto: lead?.contacto?.nombre || `Lead #${leadId}`,
                 motivo: args.motivo,
                 urgente: args.urgente ?? false,
+                agente: agente ? {
+                    nombre: agente.nombre,
+                    telefono: agente.telefono,
+                    whatsapp: agente.whatsapp,
+                    facebook: agente.facebook,
+                    instagram: agente.instagram,
+                } : null,
             },
         });
 
@@ -827,20 +954,95 @@ ${fase}
         return { ok: true, objecion_registrada: args.tipo_objecion };
     }
 
+    // ── Tool: actualizar perfil financiero ────────────────────────────────────
+    private async actualizarPerfilFinanciero(leadId: number, args: {
+        proposito?: string; metodo_financiamiento?: string; monto_credito?: number;
+        tiene_enganche?: boolean; porcentaje_enganche?: number; urgencia?: string;
+        segmento_cliente?: string;
+    }) {
+        // Guardar como nota interna ya que no hay tabla dedicada
+        const partes: string[] = [];
+        if (args.proposito) partes.push(`Propósito: ${args.proposito}`);
+        if (args.metodo_financiamiento) partes.push(`Forma de pago: ${args.metodo_financiamiento}`);
+        if (args.monto_credito) partes.push(`Crédito disponible: $${args.monto_credito.toLocaleString('es-MX')}`);
+        if (args.tiene_enganche !== undefined) partes.push(`Tiene enganche: ${args.tiene_enganche ? 'Sí' : 'No'}`);
+        if (args.porcentaje_enganche) partes.push(`Enganche: ${args.porcentaje_enganche}%`);
+        if (args.urgencia) partes.push(`Urgencia: ${args.urgencia}`);
+        if (args.segmento_cliente) partes.push(`Segmento: ${args.segmento_cliente}`);
+
+        if (partes.length === 0) return { ok: false, mensaje: 'Nada que registrar' };
+
+        await this.prisma.crmActividad.create({
+            data: {
+                id_lead: leadId,
+                tipo: 'NOTE',
+                descripcion: `💰 Perfil Financiero:\n${partes.join('\n')}`,
+            },
+        });
+
+        // Actualizar etiquetas IA del lead
+        const etiquetas: string[] = [];
+        if (args.proposito === 'INVERSION_RENTA' || args.proposito === 'INVERSION_PLUSVALIA') etiquetas.push('Inversionista');
+        if (args.proposito === 'PARA_VIVIR') etiquetas.push('Para vivir');
+        if (args.proposito === 'VACACIONAL') etiquetas.push('Vacacional');
+        if (args.metodo_financiamiento === 'CONTADO') etiquetas.push('Contado');
+        if (args.metodo_financiamiento === 'INFONAVIT') etiquetas.push('Infonavit');
+        if (args.metodo_financiamiento === 'CREDITO_HIPOTECARIO') etiquetas.push('Crédito hipotecario');
+        if (args.urgencia === 'INMEDIATO' || args.urgencia === 'UN_MES') etiquetas.push('Urgente');
+        if (args.segmento_cliente === 'EXTRANJERO') etiquetas.push('Extranjero');
+
+        if (etiquetas.length > 0) {
+            const lead = await this.prisma.crmLead.findUnique({
+                where: { id_lead: leadId }, select: { etiquetas_ia: true },
+            });
+            const combinadas = [...new Set([...(lead?.etiquetas_ia || []), ...etiquetas])];
+            await this.prisma.crmLead.update({
+                where: { id_lead: leadId },
+                data: { etiquetas_ia: combinadas },
+            });
+        }
+
+        // Guardar urgencia en la solicitud si existe
+        if (args.urgencia || args.proposito) {
+            const solicitud = await this.prisma.crmSolicitudServicio.findFirst({
+                where: { id_lead: leadId, id_servicio: ID_SERVICIO_BIENES_RAICES },
+            });
+            if (solicitud) {
+                const brData: any = {};
+                if (args.proposito) brData.motivacion = args.proposito;
+                if (args.urgencia) brData.temporalidad = args.urgencia;
+                if (Object.keys(brData).length) {
+                    await this.prisma.crmSolicitudBienesRaices.upsert({
+                        where: { id_solicitud: solicitud.id_solicitud },
+                        create: { id_solicitud: solicitud.id_solicitud, ...brData },
+                        update: brData,
+                    });
+                }
+            }
+        }
+
+        return { ok: true, perfil_financiero: args };
+    }
+
     // ── Format inventory unit ─────────────────────────────────────────────────
     private formatUnit(u: any) {
         return {
             codigo: u.codigo_unidad,
             desarrollo: u.desarrollo?.nombre,
             zona: u.desarrollo?.zona?.nombre,
+            ciudad: u.desarrollo?.inv_ciudad?.nombre,
             tipo: u.tipo_inmueble?.nombre,
             tipologia: u.tipologia?.nombre,
             m2_construccion: u.m2_construccion ? Number(u.m2_construccion) : null,
             m2_terreno: u.m2_terreno ? Number(u.m2_terreno) : null,
+            recamaras: u.recamaras,
+            banos: u.banos ? Number(u.banos) : null,
             precio: u.precios_lista ? Number(u.precios_lista) : null,
             moneda: u.moneda,
             piso: u.nivel_piso,
             estado: u.estado_unidad?.nombre,
+            descripcion: u.descripcion,
+            imagen_url: u.imagen_url,
         };
     }
 }

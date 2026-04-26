@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { UploadModule } from '../upload/upload.module';
 import { WhatsappController } from './whatsapp.controller';
 import { WhatsappService } from './whatsapp.service';
 import { LeadsModule } from '../crm/leads/leads.module';
@@ -9,7 +10,7 @@ import { EventsModule } from '../events/events.module';
 import { WhatsappSenderModule } from './whatsapp-sender.module';
 
 @Module({
-    imports: [DatabaseModule, LeadsModule, ContactsModule, AiModule, EventsModule, WhatsappSenderModule],
+    imports: [DatabaseModule, LeadsModule, ContactsModule, AiModule, EventsModule, WhatsappSenderModule, UploadModule],
     controllers: [WhatsappController],
     providers: [WhatsappService],
     exports: [WhatsappService],

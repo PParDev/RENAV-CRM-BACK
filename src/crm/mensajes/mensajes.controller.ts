@@ -20,18 +20,12 @@ export class MensajesController {
             media_url: body.media_url,
         });
 
-<<<<<<< Updated upstream
         // Reenviar por WhatsApp si es mensaje saliente del agente Y tiene un lead asociado
         if (!mensaje.es_entrante && mensaje.id_lead) {
-            this.whatsappSender.sendMessageToLead(mensaje.id_lead, mensaje.texto);
-=======
-        // Reenviar por WhatsApp si es mensaje saliente del agente
-        if (!mensaje.es_entrante) {
-            const waMsgId = await this.whatsappSender.sendMessageToLead(mensaje.id_lead, mensaje.texto);
+            const waMsgId = await this.whatsappSender.sendMessageToLead(mensaje.id_lead, mensaje.texto, mensaje.media_url || undefined);
             if (waMsgId) {
                 await this.mensajesService.update(mensaje.id_mensaje, { whatsapp_msg_id: waMsgId });
             }
->>>>>>> Stashed changes
         }
 
         return mensaje;
