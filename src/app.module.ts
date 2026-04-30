@@ -10,6 +10,7 @@ import { AiModule } from './ai/ai.module';
 import { ConfigModule } from '@nestjs/config';
 import { ScheduleModule } from '@nestjs/schedule';
 import { WhatsappModule } from './whatsapp/whatsapp.module';
+import { InstagramModule } from './instagram/instagram.module';
 import { EventsModule } from './events/events.module';
 
 @Module({
@@ -24,6 +25,7 @@ import { EventsModule } from './events/events.module';
     UploadModule,
     AiModule,
     WhatsappModule,
+    InstagramModule,
     EventsModule,
   ],
 })

@@ -107,6 +107,7 @@ model CatServicios {
   lead_servicios      CrmLeadServicio[]
   etapas_pipeline     CrmEtapaPipeline[]
   solicitudes         CrmSolicitudServicio[]
+  usuario_servicios   CrmUsuarioServicio[]   @relation("UsuarioServicios")
 
   @@map("cat_servicios")
   @@schema("cat")
@@ -247,14 +248,15 @@ model CatZona {
 // =========================================================
 
 model CrmContacto {
-  id_contacto Int      @id @default(autoincrement())
-  nombre      String
-  correo      String?
-  telefono    String?
-  origen      String?
-  ciudad      String?
-  activo      Boolean  @default(true)
-  creado_en   DateTime @default(now()) @db.Timestamptz
+  id_contacto  Int      @id @default(autoincrement())
+  nombre       String
+  correo       String?
+  telefono     String?
+  instagram_id String?
+  origen       String?
+  ciudad       String?
+  activo       Boolean  @default(true)
+  creado_en    DateTime @default(now()) @db.Timestamptz
 
   leads CrmLead[]
 
@@ -262,27 +264,43 @@ model CrmContacto {
   @@schema("crm")
   @@index([telefono])
   @@index([correo])
+  @@index([instagram_id])
 }
 
 model CrmUsuario {
-  id_usuario    Int      @id @default(autoincrement())
-  nombre        String
-  email         String   @unique
-  telefono      String?
-  whatsapp      String?
-  facebook      String?
-  instagram     String?
-  rol           String
-  password_hash String?
-  activo        Boolean  @default(true)
-  creado_en     DateTime @default(now()) @db.Timestamptz
+  id_usuario       Int      @id @default(autoincrement())
+  nombre           String
+  email            String   @unique
+  telefono         String?
+  whatsapp         String?
+  facebook         String?
+  instagram        String?
+  rol              Role
+  password_hash    String?
+  activo           Boolean  @default(true)
+  perfil_completo  Boolean  @default(false)
+  bio              String?
+  creado_en        DateTime @default(now()) @db.Timestamptz
 
   leads_asignados     CrmLead[]
   historial_etapas    CrmHistorialEtapaLead[]
   actividades_creadas CrmActividad[]
   mensajes_enviados   CrmMensaje[]
+  usuario_servicios   CrmUsuarioServicio[]
 
   @@map("crm_usuario")
+  @@schema("crm")
+}
+
+model CrmUsuarioServicio {
+  id_usuario  Int
+  id_servicio Int
+
+  usuario CrmUsuario   @relation(fields: [id_usuario], references: [id_usuario], onDelete: Cascade)
+  servicio CatServicios @relation("UsuarioServicios", fields: [id_servicio], references: [id_servicio], onDelete: Cascade)
+
+  @@id([id_usuario, id_servicio])
+  @@map("crm_usuario_servicio")
   @@schema("crm")
 }
 

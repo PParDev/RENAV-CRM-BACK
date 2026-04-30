@@ -1,4 +1,4 @@
-import { IsEnum, IsEmail, IsNotEmpty, IsString, MinLength, IsOptional, IsBoolean } from 'class-validator';
+import { IsEnum, IsEmail, IsNotEmpty, IsString, MinLength, IsOptional, IsBoolean, IsArray, IsInt } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Role } from '@prisma/client';
 
@@ -45,4 +45,15 @@ export class CreateUserDto {
     @IsOptional()
     @IsString()
     instagram?: string;
+
+    @ApiPropertyOptional()
+    @IsOptional()
+    @IsString()
+    bio?: string;
+
+    @ApiPropertyOptional({ type: [Number] })
+    @IsOptional()
+    @IsArray()
+    @IsInt({ each: true })
+    servicios?: number[];
 }

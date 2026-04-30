@@ -8,9 +8,10 @@ import { DatabaseModule } from '../database/database.module';
 import { AiModule } from '../ai/ai.module';
 import { EventsModule } from '../events/events.module';
 import { WhatsappSenderModule } from './whatsapp-sender.module';
+import { InstagramModule } from '../instagram/instagram.module';
 
 @Module({
-    imports: [DatabaseModule, LeadsModule, ContactsModule, AiModule, EventsModule, WhatsappSenderModule, UploadModule],
+    imports: [DatabaseModule, LeadsModule, ContactsModule, AiModule, EventsModule, WhatsappSenderModule, UploadModule, InstagramModule],
     controllers: [WhatsappController],
     providers: [WhatsappService],
     exports: [WhatsappService],

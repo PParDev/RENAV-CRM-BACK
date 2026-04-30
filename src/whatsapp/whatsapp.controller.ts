@@ -1,12 +1,16 @@
-import { Controller, Get, Post, Body, Query, HttpCode, HttpStatus, Res, Req } from '@nestjs/common';
+import { Controller, Get, Post, Body, Query, HttpCode, HttpStatus, Res, Req, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { WhatsappService } from './whatsapp.service';
+import { InstagramService } from '../instagram/instagram.service';
 import type { Request, Response } from 'express';
 
 @Controller('whatsapp')
 export class WhatsappController {
+    private readonly logger = new Logger(WhatsappController.name);
+
     constructor(
         private readonly whatsappService: WhatsappService,
+        private readonly instagramService: InstagramService,
         private readonly configService: ConfigService,
     ) { }
 
@@ -34,6 +38,24 @@ export class WhatsappController {
     @HttpCode(HttpStatus.OK)
     async handleIncomingMessage(@Body() body: any) {
         // According to Meta documentation, always return 200 OK
+        this.logger.log(`[Meta Webhook] object=${body?.object}`);
+        
+        // ─── Instagram Direct Messages ──────────────────────────────────────────
+        // Meta sends IG DMs via the same App webhook but with object='instagram'
+        if (body?.object === 'instagram') {
+            const entry = body?.entry?.[0];
+            const messaging = entry?.messaging?.[0];
+            if (messaging?.sender?.id && messaging?.message?.text) {
+                const senderId = messaging.sender.id;
+                const text = messaging.message.text;
+                const username = `Instagram User ${senderId.slice(-4)}`;
+                this.logger.log(`[Instagram] DM de ${senderId}: ${text}`);
+                await this.instagramService.processMessage(senderId, text, username);
+            }
+            return 'EVENT_RECEIVED';
+        }
+
+        // ─── WhatsApp ──────────────────────────────────────────────────────────
         const value = body?.entry?.[0]?.changes?.[0]?.value;
         if (!value) return 'no_value';
 

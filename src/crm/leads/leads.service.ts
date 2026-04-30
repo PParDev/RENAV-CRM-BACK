@@ -13,7 +13,7 @@ export class LeadsService {
     async create(createLeadDto: CreateLeadDto): Promise<CrmLead> {
         // Auto-asignar al agente con menos leads activos si no se especificó uno
         const id_usuario_asignado =
-            createLeadDto.id_usuario_asignado ?? (await this.getNextAgent());
+            createLeadDto.id_usuario_asignado ?? (await this.getNextAgent(createLeadDto.id_servicio_principal ?? undefined));
 
         const lead = await this.prisma.crmLead.create({
             data: {
@@ -35,12 +35,24 @@ export class LeadsService {
     }
 
     // Devuelve el id del agente activo con menos leads abiertos (least-loaded)
-    private async getNextAgent(): Promise<number | null> {
-        const agents = await this.prisma.crmUsuario.findMany({
+    // Si se indica id_servicio, prioriza agentes capacitados en ese servicio.
+    private async getNextAgent(id_servicio?: number): Promise<number | null> {
+        const allAgents = await this.prisma.crmUsuario.findMany({
             where: { activo: true },
-            select: { id_usuario: true },
+            select: {
+                id_usuario: true,
+                usuario_servicios: { select: { id_servicio: true } },
+            },
         });
-        if (!agents.length) return null;
+        if (!allAgents.length) return null;
+
+        // Si hay servicio, intentar filtrar por agentes capacitados
+        let agents = id_servicio
+            ? allAgents.filter(a => a.usuario_servicios.some(s => s.id_servicio === id_servicio))
+            : allAgents;
+
+        // Fallback: si ningún agente está capacitado, usar todos
+        if (agents.length === 0) agents = allAgents;
 
         const ids = agents.map((a) => a.id_usuario);
 

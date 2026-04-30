@@ -27,9 +27,23 @@ export class UsersController {
         return this.usersService.findOne(id);
     }
 
+    @Get(':id/servicios')
+    getServicios(@Param('id') id: string) {
+        return this.usersService.getServicios(id);
+    }
+
     @Patch(':id')
     update(@Param('id') id: string, @Body() updateUserDto: UpdateUserDto) {
         return this.usersService.update(id, updateUserDto);
+    }
+
+    // Endpoint del wizard: completa perfil con bio + servicios
+    @Patch(':id/completar-perfil')
+    completarPerfil(
+        @Param('id') id: string,
+        @Body() body: { bio?: string; servicios: number[] },
+    ) {
+        return this.usersService.completarPerfil(id, body);
     }
 
     @Delete(':id')
