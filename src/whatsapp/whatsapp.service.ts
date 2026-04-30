@@ -122,15 +122,14 @@ export class WhatsappService {
             },
         });
 
-        // 4. Auto-transition: if the lead is still NUEVO, mark it as EN PROCESO
-        //    since there is now an active conversation going on.
-        if (lead.estado === 'NUEVO') {
+        // 4. Auto-transition: if the lead is still NUEVO LEAD or NUEVO, mark it as DIAGNOSTICO
+        if (lead.estado === 'NUEVO LEAD' || lead.estado === 'NUEVO') {
             await this.prisma.crmLead.update({
                 where: { id_lead: lead.id_lead },
-                data: { estado: 'EN PROCESO' },
+                data: { estado: 'DIAGNOSTICO' },
             });
-            console.log(`[WhatsApp] Lead ${lead.id_lead} auto-transitioned NUEVO → EN PROCESO`);
-            this.eventsService.emit({ type: 'lead_actualizado', payload: { id_lead: lead.id_lead, estado: 'EN PROCESO' } });
+            console.log(`[WhatsApp] Lead ${lead.id_lead} auto-transitioned NUEVO → DIAGNOSTICO`);
+            this.eventsService.emit({ type: 'lead_actualizado', payload: { id_lead: lead.id_lead, estado: 'DIAGNOSTICO' } });
         }
         
         console.log(`[WhatsApp] New message from ${cleanPhone} saved to lead ${lead.id_lead}`);

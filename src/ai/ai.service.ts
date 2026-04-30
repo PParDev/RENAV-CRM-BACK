@@ -88,7 +88,7 @@ export class AiService implements OnModuleInit {
                         properties: {
                             estado: {
                                 type: 'string',
-                                enum: ['NUEVO', 'EN PROCESO', 'CALIFICADO', 'CERRADO', 'DESCARTADO', 'PERDIDO'],
+                                enum: ['NUEVO LEAD', 'DIAGNOSTICO', 'CALIFICADO', 'PRESENTACION', 'SEGUIMIENTO', 'CERRADO', 'POSTVENTA', 'DESCARTADO', 'PERDIDO'],
                             },
                             prioridad: {
                                 type: 'string',
@@ -674,14 +674,14 @@ ${fase}
             },
         });
 
-        // 7. Auto-transition: if the lead is still NUEVO, move it to EN PROCESO
+        // 7. Auto-transition: if the lead is still NUEVO LEAD, move it to DIAGNOSTICO
         //    (Note: Incoming message should have already done this, but we do it for robustness)
-        if (lead?.estado === 'NUEVO') {
+        if (lead?.estado === 'NUEVO LEAD' || lead?.estado === 'NUEVO') {
             await this.prisma.crmLead.update({
                 where: { id_lead: leadId },
-                data: { estado: 'EN PROCESO' },
+                data: { estado: 'DIAGNOSTICO' },
             });
-            this.eventsService.emit({ type: 'lead_actualizado', payload: { id_lead: leadId, estado: 'EN PROCESO' } });
+            this.eventsService.emit({ type: 'lead_actualizado', payload: { id_lead: leadId, estado: 'DIAGNOSTICO' } });
         }
 
         return { 
@@ -920,9 +920,9 @@ ${fase}
         // Map temperature to lead priority + state
         const tempMap: Record<string, { prioridad: string; estado?: string }> = {
             'FRIO': { prioridad: 'BAJA' },
-            'TIBIO': { prioridad: 'MEDIA', estado: 'EN PROCESO' },
-            'CALIENTE': { prioridad: 'ALTA', estado: 'EN PROCESO' },
-            'MUY_CALIENTE': { prioridad: 'URGENTE', estado: 'CALIFICADO' },
+            'TIBIO': { prioridad: 'MEDIA', estado: 'DIAGNOSTICO' },
+            'CALIENTE': { prioridad: 'ALTA', estado: 'CALIFICADO' },
+            'MUY_CALIENTE': { prioridad: 'URGENTE', estado: 'PRESENTACION' },
         };
 
         const mapping = tempMap[args.temperatura] || { prioridad: 'MEDIA' };

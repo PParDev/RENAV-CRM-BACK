@@ -21,16 +21,15 @@ export class MensajesService {
             },
         });
 
-        // Auto-transition: if the lead is still NUEVO, move it to EN PROCESO
-        // now that there is active conversation happening.
+        // Auto-transition: if the lead is still NUEVO LEAD or NUEVO, move it to DIAGNOSTICO
         if (data.id_lead) {
-            const lead = await this.prisma.crmLead.findUnique({ where: { id_lead: data.id_lead }, select: { estado: true } });
-            if (lead?.estado === 'NUEVO') {
+            const currentLead = await this.prisma.crmLead.findUnique({ where: { id_lead: data.id_lead } });
+            if (currentLead && (currentLead.estado === 'NUEVO LEAD' || currentLead.estado === 'NUEVO')) {
                 await this.prisma.crmLead.update({
                     where: { id_lead: data.id_lead },
-                    data: { estado: 'EN PROCESO' },
+                    data: { estado: 'DIAGNOSTICO' },
                 });
-                this.eventsService.emit({ type: 'lead_actualizado', payload: { id_lead: data.id_lead, estado: 'EN PROCESO' } });
+                this.eventsService.emit({ type: 'lead_actualizado', payload: { id_lead: data.id_lead, estado: 'DIAGNOSTICO' } });
             }
         }
 
